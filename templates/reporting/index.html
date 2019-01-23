@@ -1,0 +1,48 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block title-section %}Reports{% endblock %}
+{% block title-sub %}Lists available reports{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+{% endblock %}
+
+{% block body %}
+    <div class="box">
+        <div class="content">
+            <div class="row expanded">
+                <div class="large-6 columns">
+
+                    <ul class="accordion" data-accordion>
+                        <li class="accordion-item" data-accordion-item>
+                            <a href="#" class="accordion-title">Journal Metrics</a>
+                            <div class="accordion-content" data-tab-content>
+                                <p>This report provides view and download metrics grouped by Journal.</p>
+                                <a href="{% url 'reporting_journals' %}">View Report</a>
+                            </div>
+                        </li>
+                        <li class="accordion-item" data-accordion-item>
+                            <a href="#" class="accordion-title">Article Metrics</a>
+                            <div class="accordion-content" data-tab-content>
+                                <p>This report provides view and download metrics grouped by Article for a given Journal.</p>
+                                <form method="POST">
+                                    {% csrf_token %}
+                                    {{ journal_report_form }}
+                                </form>
+                            </div>
+                        </li>
+                        <li class="accordion-item" data-accordion-item>
+                            <a href="#" class="accordion-title">Production Times</a>
+                            <div class="accordion-content" data-tab-content>
+                                <p>This report provides average times for production tasks.</p>
+                                <a href="{% url 'reporting_production' %}">View Report</a>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
