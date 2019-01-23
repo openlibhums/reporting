@@ -3,8 +3,10 @@ from django.shortcuts import render, reverse, redirect, get_object_or_404
 from plugins.reporting import forms, logic
 from journal import models
 from production import models as pm
+from security.decorators import editor_user_required
 
 
+@editor_user_required
 def index(request):
     """
     Displays a list of reports for a user to select.
@@ -34,6 +36,7 @@ def index(request):
     return render(request, 'reporting/index.html', context)
 
 
+@editor_user_required
 def report_journals(request):
     """
     Displays views and downloads for each journal.
@@ -67,6 +70,7 @@ def report_journals(request):
     return render(request, template, context)
 
 
+@editor_user_required
 def report_articles(request, journal_id):
     """
     Displays views and downloads for each article in a journal.
@@ -97,6 +101,7 @@ def report_articles(request, journal_id):
     return render(request, template, context)
 
 
+@editor_user_required
 def report_production(request):
     """
     Presents information about lead times for production assignents
