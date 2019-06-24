@@ -7,8 +7,7 @@
 {% block breadcrumbs %}
     {{ block.super }}
     <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
-    <li><a href="{% url 'reporting_journals' %}">Journal Report
-        Articles</a></li>
+    <li>Geographical Spread Report</a></li>
 {% endblock %}
 
 {% block body %}
@@ -36,17 +35,19 @@
                 <table id="metricsreport">
                     <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Views</th>
-                        <th>Downloads</th>
+                        <th width="35%">Title</th>
+                        <th>Date Published</th>
+                        <th>Views in Time Period</th>
+                        <th>Downloads in Time Period</th>
                     </tr>
                     </thead>
                     <tbody>
-                    {% for journal in journals %}
+                    {% for article in articles %}
                         <tr>
-                            <td>{{ journal.name }}</td>
-                            <td>{{ journal.views }}</td>
-                            <td>{{ journal.downloads }}</td>
+                            <td>{{ article.title|safe }}</td>
+                            <td>{{ article.date_published }}</td>
+                            <td>{{ article.views|length }}</td>
+                            <td>{{ article.downloads|length }}</td>
                         </tr>
                     {% endfor %}
                     </tbody>

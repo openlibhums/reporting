@@ -1,0 +1,87 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block title-section %}Press Report{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li><a href="{% url 'reporting_press' %}">{{ request.press.name }}
+        Reports</a></li>
+{% endblock %}
+
+{% block body %}
+    <div class="row expanded">
+        <div class="large-6 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Date Filters</h2>
+                </div>
+                <div class="content">
+                    <form method="GET">
+                        {{ date_form.errors|safe }}
+                        <div class="large-4 columns">
+                            {{ date_form.start_date }}
+                        </div>
+                        <div class="large-4 columns">
+                            {{ date_form.end_date }}
+                        </div>
+                        <div class="large-2 columns end">
+                            <button class="button">Submit</button>
+                        </div>
+                    </form>
+                    <p><br /></p>
+                </div>
+            </div>
+        </div>
+        <div class="large-12 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Journals</h2>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <button class="button">Export to CSV</button>
+                    </form>
+                </div>
+                <div class="content">
+                    <table class="scroll small" id="press_report">
+                        <thead>
+                        <tr>
+                            <th>Journal</th>
+                            <th>Submissions</th>
+                            <th>Published Submissions</th>
+                            <th>Rejected Submissions</th>
+                            <th>Number of Users</th>
+                            <th>Views</th>
+                            <th>Downloads</th>
+                            <th>Most Accessed Article</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for data in data_dict %}
+                            <tr>
+                                <td>{{ data.journal.name }}</td>
+                                <td>{{ data.submissions|length }}</td>
+                                <td>{{ data.published_articles|length }}</td>
+                                <td>{{ data.rejected_articles|length }}</td>
+                                <td>{{ data.users|length }}</td>
+                                <td>{{ data.views|length }}</td>
+                                <td>{{ data.downloads|length }}</td>
+                                <td>{% if data.most_viewed_article %}
+                                    {{ data.most_viewed_article.0.article__title|safe }}
+                                    ({{ data.most_viewed_article.0.total }}){% else %}
+                                    No published articles{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block js %}
+    {% include "elements/datatables.html" with target="#press_report" sort="asc" order=0 %}
+{% endblock js %}

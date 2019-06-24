@@ -37,40 +37,6 @@ def index(request):
 
 
 @editor_user_required
-def report_journals(request):
-    """
-    Displays views and downloads for each journal.
-    :param request: HttpRequest object
-    :return: HttpResponse or HttpRedirect
-    """
-    journals = models.Journal.objects.filter(is_remote=False)
-    start_date, end_date = logic.get_start_and_end_date(request)
-    date_form = forms.DateForm(
-        initial={'start_date': start_date, 'end_date': end_date}
-    )
-
-    for journal in journals:
-        journal.views, journal.downloads = logic.get_accesses(
-            journal,
-            start_date,
-            end_date
-        )
-
-    if request.POST:
-        return logic.export_journal_csv(journals)
-
-    template = 'reporting/report_journals.html'
-    context = {
-        'journals': journals,
-        'start_date': start_date,
-        'end_date': end_date,
-        'date_form': date_form,
-    }
-
-    return render(request, template, context)
-
-
-@editor_user_required
 def report_articles(request, journal_id):
     """
     Displays views and downloads for each article in a journal.
@@ -86,8 +52,10 @@ def report_articles(request, journal_id):
         initial={'start_date': start_date, 'end_date': end_date}
     )
 
+    data = logic.press_journal_report_data([journal], start_date, end_date)
+
     if request.POST:
-        return logic.export_article_csv(articles)
+        return logic.export_article_csv(articles, data)
 
     template = 'reporting/report_articles.html'
     context = {
@@ -96,6 +64,7 @@ def report_articles(request, journal_id):
         'start_date': start_date,
         'end_date': end_date,
         'date_form': date_form,
+        'data': data[0],
     }
 
     return render(request, template, context)
@@ -149,3 +118,61 @@ def report_production(request):
     }
 
     return render(request, template, context)
+
+
+@editor_user_required
+def report_geo(request, journal_id=None):
+    if journal_id:
+        journal = get_object_or_404(models.Journal, pk=journal_id)
+    else:
+        journal = None
+
+    start_date, end_date = logic.get_start_and_end_date(request)
+
+    date_form = forms.DateForm(
+        initial={'start_date': start_date, 'end_date': end_date}
+    )
+
+    access_by_country = logic.acessses_by_country(journal)
+
+    template = 'reporting/report_geo.html'
+    context = {
+        'journal': journal,
+        'start_date': start_date,
+        'end_date': end_date,
+        'date_form': date_form,
+    }
+
+    return render(request, template, context)
+
+
+@editor_user_required
+def press(request):
+    start_date, end_date = logic.get_start_and_end_date(request)
+    date_form = forms.DateForm(
+        initial={'start_date': start_date, 'end_date': end_date}
+    )
+
+    journals = models.Journal.objects.filter(
+        hide_from_press=False,
+        is_remote=False,
+    ).order_by('code')
+
+    data_dict = logic.press_journal_report_data(
+        journals,
+        start_date,
+        end_date,
+    )
+
+    if request.POST:
+        return logic.export_press_csv(data_dict)
+
+    template = 'reporting/press.html'
+    context = {
+        'date_form': date_form,
+        'journals': journals,
+        'data_dict': data_dict,
+    }
+
+    return render(request, template, context)
+

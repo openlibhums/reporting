@@ -17,10 +17,10 @@
 
                     <ul class="accordion" data-accordion>
                         <li class="accordion-item" data-accordion-item>
-                            <a href="#" class="accordion-title">Journal Metrics</a>
+                            <a href="#" class="accordion-title">Press Report</a>
                             <div class="accordion-content" data-tab-content>
-                                <p>This report provides view and download metrics grouped by Journal.</p>
-                                <a href="{% url 'reporting_journals' %}">View Report</a>
+                                <p>Shows information at the press level eg. most viewed paper, most viewed journal, submissions etc.</p>
+                                <a href="{% url 'reporting_press' %}">View Report</a>
                             </div>
                         </li>
                         <li class="accordion-item" data-accordion-item>
@@ -38,6 +38,13 @@
                             <div class="accordion-content" data-tab-content>
                                 <p>This report provides average times for production tasks.</p>
                                 <a href="{% url 'reporting_production' %}">View Report</a>
+                            </div>
+                        </li>
+                        <li class="accordion-item" data-accordion-item>
+                            <a href="#" class="accordion-title">Geographical Spread</a>
+                            <div class="accordion-content" data-tab-content>
+                                <p>This report provides views and downloads grouped by country</p>
+                                <a href="{% url 'reporting_geo' %}">View Report by Press</a>
                             </div>
                         </li>
                     </ul>
