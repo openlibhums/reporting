@@ -1,6 +1,10 @@
 import csv
 import os
 from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
+import datetime
+from datetime import datetime
+from collections import OrderedDict
 
 from django.utils import timezone
 from django.conf import settings
@@ -10,6 +14,7 @@ from submission import models as sm
 from metrics import models as mm
 from core.files import serve_temp_file
 from utils.function_cache import cache
+from journal import models as jm
 
 
 def get_first_day(dt, d_years=0, d_months=0):
@@ -29,6 +34,41 @@ def get_start_and_end_date(request):
     last_date = request.GET.get('end_date', get_last_day(d))
 
     return start_date, last_date
+
+
+def get_first_month_year():
+    return '{year}-{month}'.format(year=timezone.now().year, month='01')
+
+
+def get_current_month_year():
+    return '{year}-{month}'.format(
+        year=timezone.now().year,
+        month=timezone.now().strftime('%m'),
+    )
+
+
+def get_start_and_end_months(request):
+    start_month = request.GET.get(
+        'start_month', get_first_month_year()
+    )
+
+    end_month = request.GET.get(
+        'end_month', get_current_month_year()
+    )
+
+    start_month_m, start_month_y = start_month.split('-')
+    end_month_m, end_month_y = end_month.split('-')
+
+    date_parts = {
+        'start_month_m': start_month_m,
+        'start_month_y': start_month_y,
+        'end_month_m': end_month_m,
+        'end_month_y': end_month_y,
+        'start_unsplit': start_month,
+        'end_unsplit': end_month,
+    }
+
+    return start_month, end_month, date_parts
 
 
 def get_articles(journal, start_date, end_date):
@@ -303,3 +343,44 @@ def export_press_csv(data_dict):
         all_rows.append(row)
 
     return export_csv(all_rows)
+
+
+@cache(600)
+def journal_usage_by_month_data(date_parts):
+    journals = jm.Journal.objects.filter(is_remote=False)
+    metrics = mm.ArticleAccess.objects.all()
+
+    start_str = '{}-01'.format(date_parts.get('start_unsplit'))
+    end_str = '{}-27'.format(date_parts.get('end_unsplit'))
+
+    start = datetime.strptime(start_str, '%Y-%m-%d').date()
+    end = datetime.strptime(end_str, '%Y-%m-%d').date()
+
+    dates = [start]
+
+    while start < end:
+        start += relativedelta(months=1)
+        if start < end:
+            dates.append(start)
+
+    data = []
+
+    for journal in journals:
+        journal_metrics = metrics.filter(article__journal=journal)
+        print(journal_metrics.count())
+        journal_data = {'journal': journal, 'all_metrics': journal_metrics}
+
+        date_metrics_list = []
+
+        for date in dates:
+            date_metrics = journal_metrics.filter(
+                accessed__month=date.month,
+                accessed__year=date.year,
+            )
+            date_metrics_list.append(date_metrics.count())
+
+        journal_data['date_metrics'] = date_metrics_list
+
+        data.append(journal_data)
+
+    return data, dates

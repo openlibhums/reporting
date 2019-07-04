@@ -71,6 +71,33 @@ def report_articles(request, journal_id):
 
 
 @editor_user_required
+def report_journal_usage_by_month(request):
+    """
+    Presents a table of usage information by month between two supplied months.
+    :param request: HttpRequest
+    :return: HttpResponse
+    """
+    start_month, end_month, date_parts = logic.get_start_and_end_months(request)
+
+    month_form = forms.MonthForm(
+        initial={
+            'start_month': start_month, 'end_month': end_month,
+        }
+    )
+
+    data, dates = logic.journal_usage_by_month_data(date_parts)
+
+    template = 'reporting/report_journal_usage_by_month.html'
+    context = {
+        'month_form': month_form,
+        'data': data,
+        'dates': dates,
+    }
+
+    return render(request, template, context)
+
+
+@editor_user_required
 def report_production(request):
     """
     Presents information about lead times for production assignents
@@ -154,7 +181,6 @@ def press(request):
     )
 
     journals = models.Journal.objects.filter(
-        hide_from_press=False,
         is_remote=False,
     ).order_by('code')
 
