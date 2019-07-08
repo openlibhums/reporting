@@ -87,6 +87,9 @@ def report_journal_usage_by_month(request):
 
     data, dates = logic.journal_usage_by_month_data(date_parts)
 
+    if request.POST:
+        return logic.export_usage_by_month(data, dates)
+
     template = 'reporting/report_journal_usage_by_month.html'
     context = {
         'month_form': month_form,

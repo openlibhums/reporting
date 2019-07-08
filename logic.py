@@ -367,7 +367,6 @@ def journal_usage_by_month_data(date_parts):
 
     for journal in journals:
         journal_metrics = metrics.filter(article__journal=journal)
-        print(journal_metrics.count())
         journal_data = {'journal': journal, 'all_metrics': journal_metrics}
 
         date_metrics_list = []
@@ -384,3 +383,27 @@ def journal_usage_by_month_data(date_parts):
         data.append(journal_data)
 
     return data, dates
+
+
+def export_usage_by_month(data, dates):
+    all_rows = list()
+    header_row = [
+        'Journal',
+    ]
+
+    for date in dates:
+        header_row.append(date)
+
+    all_rows.append(header_row)
+
+    for d in data:
+        row = [
+            d.get('journal').name,
+        ]
+
+        for dm in d.get('date_metrics'):
+            row.append(dm)
+
+        all_rows.append(row)
+
+    return export_csv(all_rows)
