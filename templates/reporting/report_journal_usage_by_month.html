@@ -1,13 +1,12 @@
 {% extends "admin/core/base.html" %}
 
 {% block title %}Reports{% endblock %}
-{% block title-section %}Press Report{% endblock %}
+{% block title-section %}Journal Usages by Month{% endblock %}
 
 {% block breadcrumbs %}
     {{ block.super }}
     <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
-    <li><a href="{% url 'reporting_press' %}">{{ request.press.name }}
-        Reports</a></li>
+    <li><a href="{% url 'reporting_press' %}">Journal Usage by Month</a></li>
 {% endblock %}
 
 {% block body %}
