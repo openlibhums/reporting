@@ -4,7 +4,6 @@ from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 import datetime
 from datetime import datetime
-from collections import OrderedDict
 
 from django.utils import timezone
 from django.conf import settings
@@ -15,6 +14,7 @@ from metrics import models as mm
 from core.files import serve_temp_file
 from utils.function_cache import cache
 from journal import models as jm
+from review import models as rm
 
 
 def get_first_day(dt, d_years=0, d_months=0):
@@ -407,3 +407,66 @@ def export_usage_by_month(data, dates):
         all_rows.append(row)
 
     return export_csv(all_rows)
+
+
+@cache(60)
+def peer_review_data(articles, start_date, end_date):
+    data = []
+
+    for article in articles:
+        reviews = rm.ReviewAssignment.objects.filter(
+            article=article,
+            date_accepted__isnull=False,
+            date_complete__isnull=False,
+            date_requested__gte=start_date,
+            date_requested__lte=end_date,
+        )
+
+        for review in reviews:
+            review.request_to_accept = review.date_accepted - review.date_requested
+            review.accept_to_complete = review.date_complete - review.date_accepted
+
+        data.append(
+            {'article': article, 'reviews': reviews}
+        )
+
+    return data
+
+
+def export_review_data(data):
+    all_rows = list()
+
+    headers = [
+        'Reviewer',
+        'Journal',
+        'Date Requested',
+        'Date Accepted',
+        'Date Due',
+        'Date Complete',
+        'Time to Acceptance',
+        'Time to Completion',
+    ]
+
+    all_rows.append(headers)
+
+    for data_point in data:
+        for review in data_point.get('reviews'):
+            row = [
+                review.reviewer.full_name(),
+                strip_tags(data_point.get('article').title),
+                review.date_requested,
+                review.date_accepted,
+                review.date_due,
+                review.date_complete,
+                review.request_to_accept,
+                review.accept_to_complete,
+            ]
+
+            all_rows.append(row)
+
+    return export_csv(all_rows)
+
+
+
+
+

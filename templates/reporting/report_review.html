@@ -1,0 +1,72 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block title-section %}Peer Review Report{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li><a href="{% url 'reporting_review' %}">Peer Review Report
+        Articles</a></li>
+{% endblock %}
+
+{% block body %}
+    <div class="box">
+        <div class="title-area">
+            <h2>Filter by Dates</h2>
+            <form method="POST">{% csrf_token %}<button class="button">Export to CSV</button></form>
+        </div>
+        <div class="content">
+            <div class="row expanded">
+                <form method="GET">
+                    {{ date_form.errors|safe }}
+                    <div class="large-2 columns">
+                        {{ date_form.start_date }}
+                    </div>
+                    <div class="large-2 columns">
+                        {{ date_form.end_date }}
+                    </div>
+                    <div class="large-1 columns end">
+                        <button class="button">Submit</button>
+                    </div>
+                </form>
+            </div>
+            <div class="row expanded">
+                <table id="productionreport">
+                    <thead>
+                        <tr>
+                            <th>Reviewer</th>
+                            <th>Journal</th>
+                            <th>Date Requested</th>
+                            <th>Date Accepted</th>
+                            <th>Date Due</th>
+                            <th>Date Complete</th>
+                            <th>Time to Acceptance</th>
+                            <th>Time to Completion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for article in data %}
+                            {% for review in article.reviews %}
+                                <tr>
+                                    <td>{{ review.reviewer.full_name }}</td>
+                                    <td>{{ article.article.journal.code }}</td>
+                                    <td>{{ review.date_requested }}</td>
+                                    <td>{{ review.date_accepted }}</td>
+                                    <td>{{ review.date_due|date:"Y-m-d" }}</td>
+                                    <td>{{ review.date_complete }}</td>
+                                    <td>{{ review.request_to_accept }}</td>
+                                    <td>{{ review.accept_to_complete }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+{% include "elements/datatables.html" with target="#productionreport" %}
+{% endblock js %}

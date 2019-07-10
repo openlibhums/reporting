@@ -1,9 +1,12 @@
 from django.shortcuts import render, reverse, redirect, get_object_or_404
+from django.db.models import Q
 
 from plugins.reporting import forms, logic
 from journal import models
 from production import models as pm
 from security.decorators import editor_user_required
+from submission import models as sm
+from journal import models as jm
 
 
 @editor_user_required
@@ -205,3 +208,38 @@ def press(request):
 
     return render(request, template, context)
 
+
+@editor_user_required
+def report_review(request, journal_id=None):
+    start_date, end_date = logic.get_start_and_end_date(request)
+    date_form = forms.DateForm(
+        initial={'start_date': start_date, 'end_date': end_date}
+    )
+
+    if journal_id:
+        journal = get_object_or_404(jm.Journal, pk=journal_id)
+        articles = sm.Article.objects.filter(
+            (Q(date_accepted__isnull=False) |
+             Q(date_declined__isnull=False)),
+            journal=request.journal,
+        )
+    else:
+        journal = None
+        articles = sm.Article.objects.filter(
+            (Q(date_accepted__isnull=False) |
+             Q(date_declined__isnull=False)),
+        )
+
+    data = logic.peer_review_data(articles, start_date, end_date)
+
+    if request.POST:
+        return logic.export_review_data(data)
+
+    template = 'reporting/report_review.html'
+    context = {
+        'journal': journal,
+        'date_form': date_form,
+        'data': data,
+    }
+
+    return render(request, template, context)
