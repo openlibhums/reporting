@@ -1,12 +1,13 @@
-from utils import models, setting_handler
+from utils import models
 
 PLUGIN_NAME = 'reporting'
 DESCRIPTION = 'This is a plugin for reporting on articles in Janeway.'
 AUTHOR = 'Andy Byers'
-VERSION = '1.0'
+VERSION = '1.1'
 SHORT_NAME = 'reporting'
 DISPLAY_NAME = 'reporting'
 MANAGER_URL = 'reporting_index'
+JANEWAY_VERSION = "1.3.6"
 
 
 def get_self():
