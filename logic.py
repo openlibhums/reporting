@@ -371,10 +371,10 @@ def journal_usage_by_month_data(date_parts):
 
         date_metrics_list = []
 
-        for date in dates:
+        for d in dates:
             date_metrics = journal_metrics.filter(
-                accessed__month=date.month,
-                accessed__year=date.year,
+                accessed__month=d.month,
+                accessed__year=d.year,
             )
             date_metrics_list.append(date_metrics.count())
 
