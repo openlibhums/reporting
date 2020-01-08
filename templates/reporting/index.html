@@ -54,6 +54,27 @@
                                 <a href="{% url 'reporting_geo' %}">View Report by Press</a>
                             </div>
                         </li>
+                        <li class="accordion-item" data-accordion-item>
+                            <a href="#" class="accordion-title">Peer Review Report</a>
+                            <div class="accordion-content" data-tab-content>
+                                <p>This report shows reviews and their time to completion.</p>
+                                <a href="{% url 'reporting_review' %}">View Report</a>
+                            </div>
+                        </li>
+                        <li class="accordion-item" data-accordion-item>
+                            <a href="#" class="accordion-title">Article Citations</a>
+                            <div class="accordion-content" data-tab-content>
+                                <p>This report shows article citations</p>
+                                <a href="{% url 'report_citations' %}">View Report</a>
+                            </div>
+                        </li>
+                        <li class="accordion-item" data-accordion-item>
+                            <a href="#" class="accordion-title">Journal Citations</a>
+                            <div class="accordion-content" data-tab-content>
+                                <p>This report shows journal citation totals</p>
+                                <a href="{% url 'report_all_citations' %}">View Report</a>
+                            </div>
+                        </li>
                     </ul>
                 </div>
             </div>

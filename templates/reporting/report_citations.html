@@ -1,0 +1,61 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block title-section %}Article Citation Report{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li><a href="{% url 'report_citations' %}">Article Citation Report</a></li>
+{% endblock %}
+
+{% block body %}
+    <div class="box">
+        <div class="title-area">
+            <h2>Filter by Year</h2>
+            <form method="POST">{% csrf_token %}<button class="button">Export to CSV</button></form>
+        </div>
+        <div class="content">
+            <div class="row expanded">
+                <form method="GET">
+                    {{ date_form.errors|safe }}
+                    <div class="large-2 columns">
+                        {{ date_form.year }}
+                    </div>
+                    <div class="large-2 columns">
+                        {{ date_form.all_time }} {{ date_form.all_time.label }}<br /><small>{{ date_form.all_time.help_text }}</small>
+                    </div>
+                    <div class="large-1 columns end">
+                        <button class="button">Submit</button>
+                    </div>
+                </form>
+            </div>
+            <div class="row expanded">
+                <table id="productionreport">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Journal</th>
+                            <th>Publication Date</th>
+                            <th>Citations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for article in data %}
+                                <tr>
+                                    <td>{{ article.title }}</td>
+                                    <td>{{ article.journal.name }}</td>
+                                    <td>{{ article.date_published }}</td>
+                                    <td>{% if all_time %}{{ article.citation_count }}{% else %}{{ article.citations_in_year.count }}{% endif %}</td>
+                                </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+{% include "elements/datatables.html" with target="#productionreport" sort='3' order='desc' %}
+{% endblock js %}

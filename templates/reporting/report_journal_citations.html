@@ -1,0 +1,51 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block title-section %}{{ journal.name }} Citation Report{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li><a href="{% url 'report_all_citations' %}">Journal Citations Report</a></li>
+    <li><a href="{% url 'report_journal_citations' journal.pk %}">{{ journal.name }} Citations Report</a></li>
+{% endblock %}
+
+{% block body %}
+    <div class="box">
+        <div class="row expanded">
+            <div class="large-2 columns">
+                <div class="callout success">
+                    <h4>Total Citations</h4>
+                    <p>{{ journal.citation_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="row expanded">
+            <table id="productionreport">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Publication Date</th>
+                            <th>Citations</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for article in articles %}
+                            <tr>
+                                <td>{{ article.title }}</td>
+                                <td>{{ article.date_published }}</td>
+                                <td>{{ article.citation_count }}</td>
+                                <td><a href="">View Citing Articles</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+        </div>
+    </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    {% include "elements/datatables.html" with target="#productionreport" sort='2' order='desc' %}
+{% endblock js %}

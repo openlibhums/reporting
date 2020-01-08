@@ -8,6 +8,7 @@ from datetime import datetime
 from django.utils import timezone
 from django.conf import settings
 from django.template.defaultfilters import strip_tags
+from django.db.models import Min
 
 from submission import models as sm
 from metrics import models as mm
@@ -15,6 +16,7 @@ from core.files import serve_temp_file
 from utils.function_cache import cache
 from journal import models as jm
 from review import models as rm
+from metrics import models as mm
 
 
 def get_first_day(dt, d_years=0, d_months=0):
@@ -467,6 +469,46 @@ def export_review_data(data):
     return export_csv(all_rows)
 
 
+def current_year():
+    return date.today().year
 
 
+def earliest_citation_year():
+    try:
+        check = mm.ArticleLink.objects.filter().values_list(
+            'pk'
+        ).annotate(
+            Min('year')
+        ).order_by(
+            'year'
+        )[0]
+        return check[1]
+    except IndexError:
+        return current_year()
 
+
+def get_year(request):
+    return request.GET.get('year', current_year())
+
+
+@cache(600)
+def citation_data(year):
+    articles = sm.Article.objects.filter(
+        articlelink__year=year,
+    )
+
+    return articles
+
+
+def get_journal_citations(journal):
+    counter = 0
+    articles = sm.Article.objects.filter(
+        articlelink__year__isnull=False,
+        journal=journal
+    ).distinct()
+    for article in articles:
+        counter = counter + article.citation_count
+
+    journal.citation_count = counter
+
+    return articles

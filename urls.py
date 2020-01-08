@@ -27,4 +27,13 @@ urlpatterns = [
     url(r'^geo/(?P<journal_id>\d+)/$',
         views.report_geo,
         name='report_geo_journal'),
+    url(r'^citations/articles/$',
+        views.report_citations,
+        name='report_citations'),
+    url(r'^citations/$',
+        views.report_all_citations,
+        name='report_all_citations'),
+    url(r'^citations/journal/(?P<journal_id>\d+)/$',
+        views.report_journal_citations,
+        name='report_journal_citations'),
 ]

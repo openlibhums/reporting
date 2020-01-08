@@ -2,6 +2,7 @@ from django import forms
 from django.forms import ModelChoiceField
 
 from journal import models
+from plugins.reporting import logic
 
 
 class JournalChoiceField(ModelChoiceField):
@@ -15,6 +16,10 @@ class DateInput(forms.DateInput):
 
 class MonthInput(forms.DateInput):
     input_type = 'month'
+
+
+class YearInput(forms.DateInput):
+    input_type = 'year'
 
 
 class ArticleMetricsForm(forms.Form):
@@ -33,3 +38,14 @@ class DateForm(forms.Form):
 class MonthForm(forms.Form):
     start_month = forms.DateField(widget=MonthInput())
     end_month = forms.DateField(widget=MonthInput())
+
+
+class YearForm(forms.Form):
+    year = forms.IntegerField(
+        max_value=logic.current_year(),
+        min_value=logic.earliest_citation_year(),
+    )
+    all_time = forms.BooleanField(
+        required=False,
+        help_text='Ignors the year value.',
+    )

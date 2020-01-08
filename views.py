@@ -7,6 +7,7 @@ from production import models as pm
 from security.decorators import editor_user_required
 from submission import models as sm
 from journal import models as jm
+from metrics import models as mm
 
 
 @editor_user_required
@@ -243,3 +244,90 @@ def report_review(request, journal_id=None):
     }
 
     return render(request, template, context)
+
+
+@editor_user_required
+def report_citations(request):
+    year = logic.get_year(request)
+    all_time = request.GET.get('all_time', False)
+    date_form = forms.YearForm(
+        initial={
+            'year': year,
+            'all_time': all_time,
+        }
+    )
+
+    all_articles = sm.Article.objects.filter(
+        articlelink__year__isnull=False,
+    ).distinct()
+
+    if not request.GET.get('all_time', False) == 'on':
+        data = all_articles.filter(articlelink__year=year).distinct()
+
+        for article in data:
+            article.citations_in_year = mm.ArticleLink.objects.filter(
+                article=article,
+                year=year,
+            )
+
+    else:
+        data = all_articles
+
+    template = 'reporting/report_citations.html'
+    context = {
+        'date_form': date_form,
+        'all_articles': all_articles,
+        'data': data,
+        'all_time': all_time,
+    }
+
+    return render(request, template, context)
+
+
+@editor_user_required
+def report_all_citations(request):
+    journals = jm.Journal.objects.filter(hide_from_press=False)
+
+    total_counter = 0
+    for journal in journals:
+        logic.get_journal_citations(journal=journal)
+        total_counter = total_counter + journal.citation_count
+
+    template = 'reporting/report_all_citations.html'
+    context = {
+        'journals': journals,
+        'total_counter': total_counter,
+    }
+
+    return render(request, template, context)
+
+
+@editor_user_required
+def report_journal_citations(request, journal_id):
+    journal = get_object_or_404(jm.Journal, pk=journal_id)
+    articles = logic.get_journal_citations(journal)
+
+    template = 'reporting/report_journal_citations.html'
+    context = {
+        'journal': journal,
+        'articles': articles,
+    }
+
+    return render(request, template, context)
+
+
+@editor_user_required
+def report_article_citing_works(request, journal_id, article_id):
+    journal = get_object_or_404(jm.Journal, pk=journal_id)
+    article = get_object_or_404(sm.Article, pk=article_id)
+
+    template = 'reporting/report_article_citating_works.html'
+
+    context = {
+        'journal': journal,
+        'article': article,
+        'links': article.articlelink_set.all(),
+    }
+    
+    return render(request, template, context)
+
