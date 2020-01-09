@@ -1,13 +1,14 @@
 {% extends "admin/core/base.html" %}
 
 {% block title %}Reports{% endblock %}
-{% block title-section %}{{ journal.name }} Citation Report{% endblock %}
+{% block title-section %}{{ article.title }} Citation Report{% endblock %}
 
 {% block breadcrumbs %}
     {{ block.super }}
     <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
     <li><a href="{% url 'report_all_citations' %}">Journal Citations Report</a></li>
     <li><a href="{% url 'report_journal_citations' journal.pk %}">{{ journal.name }} Citations Report</a></li>
+    <li><a href="{% url 'report_article_citing_works' journal.pk article.pk %}">{{ article.title }} Citations Report</a></li>
 {% endblock %}
 
 {% block body %}
@@ -16,7 +17,7 @@
             <div class="large-2 columns">
                 <div class="callout success">
                     <h4>Total Citations</h4>
-                    <p>{{ journal.citation_count }}</p>
+                    <p>{{ article.citation_count }}</p>
                 </div>
             </div>
         </div>
@@ -25,18 +26,18 @@
                     <thead>
                         <tr>
                             <th>Title</th>
-                            <th>Publication Date</th>
-                            <th>Citations</th>
-                            <th></th>
+                            <th>Journal</th>
+                            <th>Year</th>
+                            <th>DOI</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for article in articles %}
+                        {% for link in article.articlelink_set.all %}
                             <tr>
-                                <td>{{ article.title }}</td>
-                                <td>{{ article.date_published }}</td>
-                                <td>{{ article.citation_count }}</td>
-                                <td><a href="{% url 'report_article_citing_works' journal.pk article.pk %}">View Citing Articles</a></td>
+                                <td>{{ link.article_title }}</td>
+                                <td>{{ link.journal_title }}</td>
+                                <td>{{ link.year }}</td>
+                                <td>{{ link.doi }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>

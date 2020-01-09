@@ -36,4 +36,7 @@ urlpatterns = [
     url(r'^citations/journal/(?P<journal_id>\d+)/$',
         views.report_journal_citations,
         name='report_journal_citations'),
+    url(r'^citations/journal/(?P<journal_id>\d+)/article/(?P<article_id>\d+)/$',
+        views.report_article_citing_works,
+        name='report_article_citing_works'),
 ]
