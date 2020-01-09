@@ -37,7 +37,7 @@
                                 <td>{{ link.article_title }}</td>
                                 <td>{{ link.journal_title }}</td>
                                 <td>{{ link.year }}</td>
-                                <td>{{ link.doi }}</td>
+                                <td><a target="_blank" href="https://doi.org/{{ link.doi }}">{{ link.doi }}</a></td>
                             </tr>
                         {% endfor %}
                     </tbody>
