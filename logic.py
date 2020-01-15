@@ -235,6 +235,69 @@ def export_production_csv(production_assignments):
     return export_csv(all_rows)
 
 
+def export_journal_level_citations(journals):
+    all_rows = list()
+    header_row = [
+        'Journal',
+        'Total Citations',
+    ]
+    all_rows.append(header_row)
+
+    for journal in journals:
+        all_rows.append(
+            [
+                journal.name,
+                journal.citation_count
+            ]
+        )
+
+    return export_csv(all_rows)
+
+
+def export_article_level_citations(articles):
+    all_rows = list()
+    header_row = [
+        'Title',
+        'Publication Date',
+        'Total Citations',
+    ]
+    all_rows.append(header_row)
+
+    for article in articles:
+        all_rows.append(
+            [
+                article.title,
+                article.date_published,
+                article.citation_count,
+            ]
+        )
+
+    return export_csv(all_rows)
+
+
+def export_citing_articles(article):
+    all_rows = list()
+    header_row = [
+        'Title',
+        'Journal',
+        'Year',
+        'DOI',
+    ]
+    all_rows.append(header_row)
+
+    for citing_work in article.articlelink_set.all():
+        all_rows.append(
+            [
+                citing_work.article_title,
+                citing_work.journal_title,
+                citing_work.year,
+                citing_work.doi,
+            ]
+        )
+
+    return export_csv(all_rows)
+
+
 def average(lst):
     if lst:
         return round(sum(lst) / len(lst), 2)

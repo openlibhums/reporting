@@ -293,6 +293,9 @@ def report_all_citations(request):
         logic.get_journal_citations(journal=journal)
         total_counter = total_counter + journal.citation_count
 
+    if request.POST:
+        return logic.export_journal_level_citations(journals)
+
     template = 'reporting/report_all_citations.html'
     context = {
         'journals': journals,
@@ -307,6 +310,9 @@ def report_journal_citations(request, journal_id):
     journal = get_object_or_404(jm.Journal, pk=journal_id)
     articles = logic.get_journal_citations(journal)
 
+    if request.POST:
+        return logic.export_article_level_citations(articles)
+
     template = 'reporting/report_journal_citations.html'
     context = {
         'journal': journal,
@@ -320,6 +326,9 @@ def report_journal_citations(request, journal_id):
 def report_article_citing_works(request, journal_id, article_id):
     journal = get_object_or_404(jm.Journal, pk=journal_id)
     article = get_object_or_404(sm.Article, pk=article_id)
+
+    if request.POST:
+        return logic.export_citing_articles(article)
 
     template = 'reporting/report_article_citating_works.html'
 
