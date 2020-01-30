@@ -8,11 +8,12 @@ from datetime import datetime
 from django.utils import timezone
 from django.conf import settings
 from django.template.defaultfilters import strip_tags
-from django.db.models import Min
+from django.db.models import Min, Count
 
 from submission import models as sm
 from metrics import models as mm
 from core.files import serve_temp_file
+from core import models as core_models
 from utils.function_cache import cache
 from journal import models as jm
 from review import models as rm
@@ -305,13 +306,14 @@ def average(lst):
         return 0
 
 
-def acessses_by_country(journal):
-    unique_country_codes = mm.ArticleAccess.objects.all().values_list(
-        'country',
-        flat=True
-    ).distinct()
+def acessses_by_country(journal, start_date, end_date):
+    countries = core_models.Country.objects.annotate(
+        accesses=Count('articleaccess')
+    ).order_by('-accesses')
 
-    print(unique_country_codes)
+    # TODO: Filter by journal/time
+
+    return countries
 
 
 @cache(300)

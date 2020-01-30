@@ -167,11 +167,16 @@ def report_geo(request, journal_id=None):
         initial={'start_date': start_date, 'end_date': end_date}
     )
 
-    access_by_country = logic.acessses_by_country(journal)
+    countries = logic.acessses_by_country(
+        journal,
+        start_date,
+        end_date,
+    )
 
     template = 'reporting/report_geo.html'
     context = {
         'journal': journal,
+        'countries': countries,
         'start_date': start_date,
         'end_date': end_date,
         'date_form': date_form,
