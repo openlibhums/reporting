@@ -346,8 +346,8 @@ def press_journal_report_data(journals, start_date, end_date):
 
         rejected_articles = articles.filter(
             stage=sm.STAGE_REJECTED,
-            date_published__gte=start_date,
-            date_published__lte=end_date,
+            date_declined__gte=start_date,
+            date_declined__lte=end_date,
         )
 
         metrics = mm.ArticleAccess.objects.filter(
