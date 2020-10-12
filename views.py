@@ -29,12 +29,13 @@ def index(request):
                 return redirect(
                     reverse(
                         'reporting_articles',
-                        kwargs={'journal_id': journal.pk}
+                        kwargs={'journal_id': journal.pk},
                     )
                 )
 
     context = {
-        'journal_report_form': journal_report_form
+        'journal_report_form': journal_report_form,
+        'journals': models.Journal.objects.all(),
     }
 
     return render(request, 'reporting/index.html', context)
@@ -222,19 +223,25 @@ def report_review(request, journal_id=None):
         initial={'start_date': start_date, 'end_date': end_date}
     )
 
-    if journal_id:
+    articles = sm.Article.objects.filter(
+        (Q(date_accepted__isnull=False) |
+         Q(date_declined__isnull=False)),
+    )
+
+    if request.journal:
+        journal = request.journal
+        articles = articles.filter(
+            journal=journal,
+        )
+
+    elif journal_id:
         journal = get_object_or_404(jm.Journal, pk=journal_id)
-        articles = sm.Article.objects.filter(
-            (Q(date_accepted__isnull=False) |
-             Q(date_declined__isnull=False)),
-            journal=request.journal,
+        articles = articles.filter(
+            journal=journal,
         )
     else:
         journal = None
-        articles = sm.Article.objects.filter(
-            (Q(date_accepted__isnull=False) |
-             Q(date_declined__isnull=False)),
-        )
+
 
     data = logic.peer_review_data(articles, start_date, end_date)
 

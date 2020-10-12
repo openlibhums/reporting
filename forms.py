@@ -30,6 +30,14 @@ class ArticleMetricsForm(forms.Form):
     )
 
 
+class PeerReviewJournal(forms.Form):
+    peer_review_journal = JournalChoiceField(
+        queryset=models.Journal.objects.all().order_by('code'),
+        label="Select a Journal",
+        widget=forms.Select(attrs={"onChange": 'this.form.submit()'})
+    )
+
+
 class DateForm(forms.Form):
     start_date = forms.DateField(widget=DateInput())
     end_date = forms.DateField(widget=DateInput())
