@@ -26,7 +26,7 @@ class ArticleMetricsForm(forms.Form):
     journal = JournalChoiceField(
         queryset=models.Journal.objects.all().order_by('code'),
         label="Select a Journal",
-        widget=forms.Select(attrs={"onChange": 'this.form.submit()'})
+        widget=forms.Select(attrs={"onChange": 'this.form.submit()'}),
     )
 
 
@@ -34,7 +34,7 @@ class PeerReviewJournal(forms.Form):
     peer_review_journal = JournalChoiceField(
         queryset=models.Journal.objects.all().order_by('code'),
         label="Select a Journal",
-        widget=forms.Select(attrs={"onChange": 'this.form.submit()'})
+        widget=forms.Select(attrs={"onChange": 'this.form.submit()'}),
     )
 
 
