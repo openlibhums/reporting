@@ -308,7 +308,6 @@ def average(lst):
 
 def acessses_by_country(journal, start_date, end_date):
     metrics = mm.ArticleAccess.objects.filter(
-        article__journal=journal,
         article__stage=sm.STAGE_PUBLISHED,
         accessed__gte=start_date,
         accessed__lte=end_date,
@@ -318,9 +317,21 @@ def acessses_by_country(journal, start_date, end_date):
         country_count=Count('country')
     )
 
-    print(metrics)
+    if journal:
+        metrics = metrics.filter(
+            article__journal=journal,
+        )
 
     return metrics
+
+
+def export_country_csv(metrics):
+    all_rows = [['Country', 'Count']]
+    for row in metrics:
+        all_rows.append(
+            [row.get('country__name'), row.get('country_count')]
+        )
+    return export_csv(all_rows)
 
 
 @cache(300)

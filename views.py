@@ -173,6 +173,9 @@ def report_geo(request, journal_id=None):
         end_date,
     )
 
+    if request.POST:
+        return logic.export_country_csv(countries)
+
     template = 'reporting/report_geo.html'
     context = {
         'journal': journal,

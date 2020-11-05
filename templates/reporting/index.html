@@ -53,11 +53,11 @@
                                 <p>This report provides views and downloads grouped by country</p>
                                 {% if request.user.is_staff  %}
                                 <a href="{% url 'reporting_geo' %}">View Report by Press</a>
-                                {% endif %}
-                                {% if request.journal %}
-                                <a href="{% url 'report_geo_journal' request.journal.pk %}">{% if request.user.is_staff  %}<br />{% endif %}View Report by Journal</a>
                                 {% else %}
                                     Only staff can view the Press level report.
+                                {% endif %}
+                                {% if request.journal %}
+                                <a href="{% url 'report_geo_journal' request.journal.pk %}"> View Report by Journal</a>
                                 {% endif %}
                             </div>
                         </li>
