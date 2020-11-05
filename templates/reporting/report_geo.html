@@ -41,12 +41,10 @@
                     </thead>
                     <tbody>
                     {% for country in countries %}
-                        {% if country.accesses %}
                         <tr>
-                            <td>{{ country.name }}</td>
-                            <td>{{ country.accesses }}</td>
+                            <td>{{ country.country__name }}</td>
+                            <td>{{ country.country_count }}</td>
                         </tr>
-                        {% endif %}
                     {% endfor %}
                     </tbody>
                 </table>
@@ -56,5 +54,5 @@
 {% endblock %}
 
 {% block js %}
-{% include "elements/datatables.html" with target="#metricsreport" sort="desc" order=2 %}
+{% include "elements/datatables.html" with target="#metricsreport" sort="desc" order=1 %}
 {% endblock js %}

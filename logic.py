@@ -307,13 +307,20 @@ def average(lst):
 
 
 def acessses_by_country(journal, start_date, end_date):
-    countries = core_models.Country.objects.annotate(
-        accesses=Count('articleaccess')
-    ).order_by('-accesses')
+    metrics = mm.ArticleAccess.objects.filter(
+        article__journal=journal,
+        article__stage=sm.STAGE_PUBLISHED,
+        accessed__gte=start_date,
+        accessed__lte=end_date,
+    ).values(
+        'country__name'
+    ).annotate(
+        country_count=Count('country')
+    )
 
-    # TODO: Filter by journal/time
+    print(metrics)
 
-    return countries
+    return metrics
 
 
 @cache(300)
