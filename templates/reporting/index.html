@@ -65,7 +65,20 @@
                             <a href="#" class="accordion-title">Peer Review Report</a>
                             <div class="accordion-content" data-tab-content>
                                 <p>This report shows reviews and their time to completion.</p>
-                                <a href="{% url 'reporting_review' %}">View Report</a>
+                                {% if request.journal %}
+                                <a href="{% url 'reporting_review_journal' request.journal.pk %}">View Report</a>
+                                {% else %}
+                                    <small>
+                                        <ul>
+                                            <li><a href="{% url 'reporting_review' %}">View Report for All Journals</a>
+                                            </li>
+                                            {% for journal_ in journals %}
+                                                <li><a href="{% url 'reporting_review_journal' journal_.pk %}">View
+                                                    Report for {{ journal_.name }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </small>
+                                {% endif %}
                             </div>
                         </li>
                         <li class="accordion-item" data-accordion-item>
