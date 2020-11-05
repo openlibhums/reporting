@@ -36,6 +36,7 @@
                     <thead>
                         <tr>
                             <th>Reviewer</th>
+                            <th>Article</th>
                             <th>Journal</th>
                             <th>Date Requested</th>
                             <th>Date Accepted</th>
@@ -50,6 +51,7 @@
                             {% for review in article.reviews %}
                                 <tr>
                                     <td>{{ review.reviewer.full_name }}</td>
+                                    <td>{{ review.article.title }}</td>
                                     <td>{{ article.article.journal.code }}</td>
                                     <td>{{ review.date_requested }}</td>
                                     <td>{{ review.date_accepted }}</td>
