@@ -226,25 +226,20 @@ def report_review(request, journal_id=None):
         initial={'start_date': start_date, 'end_date': end_date}
     )
 
-    articles = sm.Article.objects.filter(
-        (Q(date_accepted__isnull=False) |
-         Q(date_declined__isnull=False)),
-    )
-
     if request.journal:
         journal = request.journal
-        articles = articles.filter(
+        articles = sm.Article.objects.filter(
             journal=journal,
         )
 
     elif journal_id:
         journal = get_object_or_404(jm.Journal, pk=journal_id)
-        articles = articles.filter(
+        articles = sm.Article.objects.filter(
             journal=journal,
         )
     else:
         journal = None
-
+        articles = sm.Article.objects.all()
 
     data = logic.peer_review_data(articles, start_date, end_date)
 
