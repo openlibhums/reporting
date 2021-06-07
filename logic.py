@@ -104,6 +104,37 @@ def get_articles(journal, start_date, end_date):
     return articles
 
 
+def get_articles_with_counts(journal, start_date, end_date):
+    if journal:
+        articles = sm.Article.objects.filter(
+            date_published__lte=end_date,
+            journal=journal
+        ).select_related('section')
+    else:
+        articles = sm.Article.objects.filter(
+            date_published__lte=end_date,
+        ).select_related('section')
+
+    for article in articles:
+        article.views = mm.ArticleAccess.objects.filter(
+            article=article,
+            accessed__gte=start_date,
+            accessed__lte=end_date,
+            type='view'
+        ).count()
+        article.downloads = mm.ArticleAccess.objects.filter(
+            article=article,
+            accessed__gte=start_date,
+            accessed__lte=end_date,
+            type='download'
+        ).count()
+        article.citations = mm.ArticleLink.objects.filter(
+            article=article
+        ).count()
+
+    return articles
+
+
 def get_accesses(journal, start_date, end_date):
     views = mm.ArticleAccess.objects.filter(
         article__journal=journal,
