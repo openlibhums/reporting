@@ -1,5 +1,6 @@
 from django.shortcuts import render, reverse, redirect, get_object_or_404
 from django.db.models import Q
+from django.utils import translation
 
 from plugins.reporting import forms, logic
 from journal import models
@@ -52,6 +53,7 @@ def report_articles(request, journal_id):
     journal = get_object_or_404(models.Journal, pk=journal_id)
     start_date, end_date = logic.get_start_and_end_date(request)
     articles = logic.get_articles(journal, start_date, end_date)
+
 
     date_form = forms.DateForm(
         initial={'start_date': start_date, 'end_date': end_date}

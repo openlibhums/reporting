@@ -76,7 +76,7 @@
                     <div class="title-area">
                         <h2>Published Articles</h2>
                     </div>
-                    <table id="metricsreport">
+                    <table class="small" id="metricsreport">
                         <thead>
                         <tr>
                             <th width="35%">Title</th>
@@ -84,6 +84,7 @@
                             <th>Date Submitted</th>
                             <th>Date Accepted</th>
                             <th>Date Published</th>
+                            <th>Days to Publication</th>
                             <th>Views</th>
                             <th>Downloads</th>
                         </tr>
@@ -96,6 +97,7 @@
                                 <td>{{ article.date_submitted }}</td>
                                 <td>{{ article.date_accepted }}</td>
                                 <td>{{ article.date_published }}</td>
+                                <td>{{ article.editorial_delta.days }}</td>
                                 <td>{{ article.views|length }}</td>
                                 <td>{{ article.downloads|length }}</td>
                             </tr>

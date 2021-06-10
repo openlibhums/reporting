@@ -8,7 +8,14 @@ from datetime import datetime
 from django.utils import timezone
 from django.conf import settings
 from django.template.defaultfilters import strip_tags
-from django.db.models import Min, Count
+from django.db.models import (
+    DurationField,
+    ExpressionWrapper,
+    F,
+    Min,
+    Count,
+    Q,
+)
 
 from submission import models as sm
 from metrics import models as mm
@@ -77,15 +84,19 @@ def get_start_and_end_months(request):
 def get_articles(journal, start_date, end_date):
     dt = timezone.now()
 
+    f_editorial_delta = ExpressionWrapper(
+        F('date_published') - F('date_submitted'),
+        output_field=DurationField(),
+    )
+
+    articles = sm.Article.objects.filter(
+        date_published__lte=dt,
+    ).select_related(
+        'section'
+    ).annotate(editorial_delta=f_editorial_delta)
+   
     if journal:
-        articles = sm.Article.objects.filter(
-            date_published__lte=dt,
-            journal=journal
-        ).select_related('section')
-    else:
-        articles = sm.Article.objects.filter(
-            date_published__lte=dt,
-        ).select_related('section')
+        articles = articles.filter(journal=journal)
 
     for article in articles:
         article.views = mm.ArticleAccess.objects.filter(
@@ -186,6 +197,7 @@ def export_article_csv(articles, data):
         'Date Submitted',
         'Date Accepted',
         'Date Published',
+        'Days to Publication'
         'Views',
         'Downloads',
     ]
@@ -198,6 +210,7 @@ def export_article_csv(articles, data):
             article.date_submitted,
             article.date_accepted,
             article.date_published,
+            article.editorial_delta.days,
             article.views.count(),
             article.downloads.count(),
         ]
