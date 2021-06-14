@@ -1,5 +1,5 @@
 from django.shortcuts import render, reverse, redirect, get_object_or_404
-from django.db.models import Q
+from django.contrib.admin.views.decorators import staff_member_required
 
 from plugins.reporting import forms, logic
 from journal import models
@@ -348,5 +348,44 @@ def report_article_citing_works(request, journal_id, article_id):
         'links': article.articlelink_set.all(),
     }
     
+    return render(request, template, context)
+
+
+@staff_member_required
+def press_board_report(request):
+    """
+    Exports a lot of information useful for making reports to editorial boards. Slow.
+    """
+    start_month, end_month, date_parts = logic.get_start_and_end_months(request)
+    month_form = forms.MonthForm(
+        initial={
+            'start_month': start_month, 'end_month': end_month,
+        }
+    )
+    all_metrics = mm.ArticleAccess.objects.all()
+    book_data, book_dates, current_year, previous_year = logic.get_book_data(date_parts)
+    journal_data = logic.get_board_report_journal_date(date_parts, all_metrics)
+    most_accessed_articles = logic.most_accessed_articles(date_parts, all_metrics)
+
+    if request.POST:
+        return logic.export_board_report_csv(
+            request,
+            book_data,
+            journal_data,
+            most_accessed_articles,
+            start_month,
+            end_month,
+        )
+
+    template = 'reporting/press_board_report.html'
+    context = {
+        'month_form': month_form,
+        'book_data': book_data,
+        'book_dates': book_dates,
+        'current_year': current_year,
+        'previous_year': previous_year,
+        'journal_data': journal_data,
+        'most_accessed_articles': most_accessed_articles,
+    }
     return render(request, template, context)
 

@@ -1,19 +1,29 @@
 import csv
 import os
+import uuid
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 import datetime
 from datetime import datetime
+from dateutil.rrule import rrule, MONTHLY
+
+from bs4 import BeautifulSoup
 
 from django.utils import timezone
 from django.conf import settings
 from django.template.defaultfilters import strip_tags
-from django.db.models import Min, Count
+from django.db.models import (
+    DurationField,
+    ExpressionWrapper,
+    F,
+    Min,
+    Count,
+    Avg
+)
+from django.template.loader import render_to_string
 
 from submission import models as sm
-from metrics import models as mm
-from core.files import serve_temp_file
-from core import models as core_models
+from core.files import serve_temp_file, get_temp_file_path_from_name
 from utils.function_cache import cache
 from journal import models as jm
 from review import models as rm
@@ -59,8 +69,8 @@ def get_start_and_end_months(request):
         'end_month', get_current_month_year()
     )
 
-    start_month_m, start_month_y = start_month.split('-')
-    end_month_m, end_month_y = end_month.split('-')
+    start_month_y, start_month_m = start_month.split('-')
+    end_month_y, end_month_m = end_month.split('-')
 
     date_parts = {
         'start_month_m': start_month_m,
@@ -366,11 +376,11 @@ def export_country_csv(metrics):
 
 
 @cache(300)
-def get_most_viewed_article(metrics):
+def get_most_viewed_article(metrics, count=1):
     from django.db.models import Count
 
     return metrics.values('article__title').annotate(
-        total=Count('article')).order_by('-total')[:1]
+        total=Count('article')).order_by('-total')[:count]
 
 
 @cache(300)
@@ -442,7 +452,7 @@ def export_press_csv(data_dict):
     for data in data_dict:
 
         most_viewed_article_string = '{title} ({count})'.format(
-            title=data['most_viewed_article'][0]['article__title']  if data['most_viewed_article'] else '',
+            title=data['most_viewed_article'][0]['article__title'] if data['most_viewed_article'] else '',
             count=data['most_viewed_article'][0]['total'] if data['most_viewed_article'] else ''
         )
 
@@ -626,3 +636,234 @@ def get_journal_citations(journal):
     journal.citation_count = counter
 
     return articles
+
+
+@cache(600)
+def get_book_data(date_parts):
+    """
+    Checks if the books plugin logic module can be loaded or returns an empty dict.
+    """
+
+    try:
+        from plugins.books import models as book_models, logic as book_logic
+        books = book_models.Book.objects.all()
+        return book_logic.book_metrics_by_month(books, date_parts)
+    except ImportError as e:
+        print(e)
+        return [], []
+
+
+def get_months_between_date_parts(date_parts):
+    start_dt = datetime(year=int(date_parts.get('start_month_y')), month=int(date_parts.get('start_month_m')), day=1)
+    end_dt = datetime(year=int(date_parts.get('end_month_y')), month=int(date_parts.get('end_month_m')), day=1)
+
+    return [dt for dt in rrule(MONTHLY, dtstart=start_dt, until=end_dt)]
+
+
+def get_months_to_jan(date_parts):
+    start_dt = datetime(int(date_parts.get('end_month_y')), 1, 1)
+    end_dt = datetime(int(date_parts.get('end_month_y')), int(date_parts.get('end_month_m')), 1)
+
+    return [dt for dt in rrule(MONTHLY, dtstart=start_dt, until=end_dt)]
+
+
+@cache(600)
+def get_average_review_time(journal, start, end):
+    f_review_delta = ExpressionWrapper(
+        F('date_complete') - F('date_requested'),
+        output_field=DurationField(),
+    )
+    average_time_to_complete = rm.ReviewAssignment.objects.filter(
+        article__journal=journal,
+        date_requested__gte=start,
+        date_requested__lte=end,
+        date_complete__gte=start,
+        date_complete__lte=end,
+    ).annotate(
+        editorial_delta=f_review_delta
+    ).aggregate(
+        Avg('editorial_delta')
+    )
+
+    return average_time_to_complete.get('editorial_delta__avg', 0)
+
+
+@cache(600)
+def get_board_report_journal_date(date_parts, all_metrics):
+    journals = jm.Journal.objects.all()
+    start_str = '{}-01'.format(date_parts.get('start_unsplit'))
+    end_str = '{}-27'.format(date_parts.get('end_unsplit'))
+
+    start = datetime.strptime(start_str, '%Y-%m-%d')
+    end = datetime.strptime(end_str, '%Y-%m-%d')
+
+    start = timezone.make_aware(start)
+    end = timezone.make_aware(end)
+
+    current_year = date_parts.get('end_month_y')
+    previous_year = str(int(current_year) - 1)
+
+    months_between_dates = len(get_months_between_date_parts(date_parts))
+    months_to_jan = len(get_months_to_jan(date_parts))
+
+    data = []
+    for journal in journals:
+        journal_metrics = all_metrics.filter(
+            article__journal=journal,
+        )
+        articles = sm.Article.objects.filter(
+            journal=journal,
+        )
+        submissions = articles.exclude(
+            stage=sm.STAGE_PUBLISHED,
+        ).filter(
+            date_submitted__gte=start,
+            date_submitted__lte=end,
+        )
+        published_articles = articles.filter(
+            stage=sm.STAGE_PUBLISHED,
+            date_published__gte=start,
+            date_published__lte=end,
+        )
+        authors = sm.FrozenAuthor.objects.filter(
+            article__in=articles,
+        ).count()
+        review_average = get_average_review_time(
+            journal,
+            start,
+            end,
+        )
+
+        journal_data = {
+            'journal': journal,
+            'views': {},
+            'downloads': {},
+            'accesses': {},
+            'total_accesses': journal_metrics.count(),
+            'articles': {}
+        }
+
+        journal_data['views']['total'] = journal_metrics.filter(type='view').count()
+        journal_data['views']['period'] = journal_metrics.filter(
+            type='view',
+            article__stage=sm.STAGE_PUBLISHED,
+            accessed__year__gte=date_parts.get('start_month_y'),
+            accessed__month__gte=date_parts.get('start_month_m'),
+            accessed__year__lte=date_parts.get('end_month_y'),
+            accessed__month__lte=date_parts.get('end_month_m'),
+        ).count()
+        journal_data['views']['period_average'] = round(journal_data['views']['period'] / months_between_dates, 2)
+        journal_data['views']['year'] = journal_metrics.filter(
+            type='view',
+            article__stage=sm.STAGE_PUBLISHED,
+            accessed__year=current_year,
+        ).count()
+        journal_data['views']['year_average'] = round(journal_data['views']['year'] / months_to_jan, 2)
+
+        journal_data['downloads']['total'] = journal_metrics.filter(type='download').count()
+        journal_data['downloads']['period'] = journal_metrics.filter(
+            type='download',
+            article__stage=sm.STAGE_PUBLISHED,
+            accessed__year__gte=date_parts.get('start_month_y'),
+            accessed__month__gte=date_parts.get('start_month_m'),
+            accessed__year__lte=date_parts.get('end_month_y'),
+            accessed__month__lte=date_parts.get('end_month_m'),
+        ).count()
+        journal_data['downloads']['period_average'] = round(journal_data['downloads']['period'] / months_between_dates, 2)
+        journal_data['downloads']['year'] = journal_metrics.filter(
+            type='download',
+            article__stage=sm.STAGE_PUBLISHED,
+            accessed__year=current_year,
+        ).count()
+        journal_data['downloads']['year_average'] = round(journal_data['downloads']['year'] / months_to_jan, 2)
+
+        journal_data['accesses']['total'] = journal_data['views']['total'] + journal_data['downloads']['total']
+        journal_data['accesses']['period'] = journal_data['views']['period'] + journal_data['downloads']['period']
+        journal_data['accesses']['period_average'] = round(journal_data['accesses']['total'] / months_between_dates, 2)
+        journal_data['accesses']['year'] = journal_data['views']['year'] + journal_data['downloads']['year']
+
+        journal_data['articles']['all'] = articles
+        journal_data['articles']['submissions'] = submissions.count()
+        journal_data['articles']['publications'] = published_articles.count()
+        journal_data['articles']['authors'] = authors
+        journal_data['review_average'] = review_average.days if review_average else 'N/a'
+
+        data.append(journal_data)
+
+    return data
+
+
+@cache(600)
+def most_accessed_articles(date_parts, all_metrics):
+    top_viewed_articles = all_metrics.filter(
+        accessed__year__gte=date_parts.get('start_month_y'),
+        accessed__month__gte=date_parts.get('start_month_m'),
+        accessed__year__lte=date_parts.get('end_month_y'),
+        accessed__month__lte=date_parts.get('end_month_m'),
+    ).values('article').annotate(
+        total=Count('article')).order_by('-total')[:10]
+
+    articles = []
+    for article in top_viewed_articles:
+        article = sm.Article.objects.get(
+            pk=article.get('article'),
+        )
+        article_metrics = all_metrics.filter(
+            article=article,
+            accessed__year__gte=date_parts.get('start_month_y'),
+            accessed__month__gte=date_parts.get('start_month_m'),
+            accessed__year__lte=date_parts.get('end_month_y'),
+            accessed__month__lte=date_parts.get('end_month_m'),
+        )
+        article.accesses = article_metrics.count()
+        article.views = article_metrics.filter(type='view').count()
+        article.downloads = article_metrics.filter(type='download').count()
+        article.citations = mm.ArticleLink.objects.filter(article=article).count()
+        articles.append(article)
+
+    return articles
+
+
+def html_table_to_csv(html):
+    filename = '{0}.csv'.format(uuid.uuid4())
+    filepath = get_temp_file_path_from_name(
+        filename,
+    )
+    soup = BeautifulSoup(str(html), 'lxml')
+    with open(filepath, "w", encoding="utf-8") as f:
+        wr = csv.writer(f)
+        for table in soup.find_all("table"):
+            for row in table.find_all("tr"):
+                cells = [cell.string for cell in row.findChildren(['th', 'td'])]
+                wr.writerow(cells)
+            wr.writerow([])
+
+    f.close()
+    return filepath, filename
+
+
+def export_board_report_csv(request, book_data, journal_data, most_accessed_articles, start_month, end_month):
+    elements = [
+        'header.html',
+        'books.html',
+        'journals.html',
+        'articles.html',
+    ]
+
+    context = {
+        'request': request,
+        'start_month': start_month,
+        'end_month': end_month,
+        'book_data': book_data,
+        'journal_data': journal_data,
+        'most_accessed_articles': most_accessed_articles,
+    }
+
+    html = ''
+    for element in elements:
+        html = html + render_to_string(
+            'reporting/elements/{element}'.format(element=element),
+            context,
+        )
+    csv_filepath, csv_filename = html_table_to_csv(html)
+    return serve_temp_file(csv_filepath, csv_filename)

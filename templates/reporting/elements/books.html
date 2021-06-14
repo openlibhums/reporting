@@ -1,0 +1,30 @@
+{% load dict %}
+
+<table class="table scroll small" id="press_report">
+    <thead>
+    <tr>
+        <th>Book</th>
+        {% for date in book_dates %}
+            <th>{{ date.month }} {{ date.year }}</th>
+        {% endfor %}
+        <th>{{ current_year }} Total</th>
+        <th>{{ previous_year }} Total</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for d in book_data %}
+        <tr>
+            <td>{{ d.book.title }}</td>
+            {% for dm in d.date_metrics %}
+                <td>{{ dm }}</td>
+            {% endfor %}
+            <td>
+                {% tag_get d current_year %}
+            </td>
+            <td>
+                {% tag_get d previous_year %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>

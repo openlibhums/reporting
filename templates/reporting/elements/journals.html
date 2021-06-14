@@ -1,0 +1,58 @@
+<table class="table table-scroll">
+    <tr>
+        <th></th>
+        <th colspan="4" class="text-center" style="background-color: lightblue">Views</th>
+        <th colspan="4" class="text-center" style="background-color: lightgrey">Downloads</th>
+        <th colspan="4" class="text-center" style="background-color: lightyellow">Total Accesses
+        </th>
+        <th colspan="5" class="text-center" style="background-color: lightcoral">Article Data</th>
+    </tr>
+    <tr>
+        <th>Journal Name</th>
+        <th>All Time</th>
+        <th>Year</th>
+        <th>In Period</th>
+        <th>Period Avg</th>
+
+
+        <th>All Time</th>
+        <th>Year</th>
+        <th>In Period</th>
+        <th>Period Avg</th>
+
+
+        <th>All Time</th>
+        <th>Year</th>
+        <th>In Period</th>
+        <th>Period Avg</th>
+
+        <th>Submissions</th>
+        <th>Publication</th>
+        <th>Authors</th>
+        <th>Peer Review Turnaround Avg (days)</th>
+    </tr>
+    {% for journal in journal_data %}
+        <tr>
+            <td>{{ journal.journal.name }}</td>
+            <td>{{ journal.views.total }}</td>
+            <td>{{ journal.views.year }}</td>
+            <td>{{ journal.views.period }}</td>
+            <td>{{ journal.views.period_average }}</td>
+
+            <td>{{ journal.downloads.total }}</td>
+            <td>{{ journal.downloads.year }}</td>
+            <td>{{ journal.downloads.period }}</td>
+            <td>{{ journal.downloads.period_average }}</td>
+
+            <td>{{ journal.accesses.total }}</td>
+            <td>{{ journal.accesses.year }}</td>
+            <td>{{ journal.accesses.period }}</td>
+            <td>{{ journal.accesses.period_average }}</td>
+
+            <td>{{ journal.articles.submissions }}</td>
+            <td>{{ journal.articles.publications }}</td>
+            <td>{{ journal.articles.authors }}</td>
+            <td>{{ journal.review_average }}</td>
+        </tr>
+    {% endfor %}
+</table>

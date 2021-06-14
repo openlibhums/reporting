@@ -1,0 +1,20 @@
+<table class="table table-scroll">
+    <tr>
+        <th>Title</th>
+        <th>Journal Name</th>
+        <th>Accesses</th>
+        <th>Views</th>
+        <th>Downloads</th>
+        <th>Citations (all time)</th>
+    </tr>
+    {% for article in most_accessed_articles %}
+        <tr>
+            <td>{{ article.title }}</td>
+            <td>{{ article.journal.name }}</td>
+            <td>{{ article.accesses }}</td>
+            <td>{{ article.views }}</td>
+            <td>{{ article.downloads }}</td>
+            <td>{{ article.citations }}</td>
+        </tr>
+    {% endfor %}
+</table>
