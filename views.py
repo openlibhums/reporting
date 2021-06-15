@@ -375,6 +375,9 @@ def press_board_report(request):
             most_accessed_articles,
             start_month,
             end_month,
+            book_dates,
+            current_year,
+            previous_year,
         )
 
     template = 'reporting/press_board_report.html'

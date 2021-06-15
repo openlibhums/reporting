@@ -650,7 +650,7 @@ def get_book_data(date_parts):
         return book_logic.book_metrics_by_month(books, date_parts)
     except ImportError as e:
         print(e)
-        return [], []
+        return [], [], '', ''
 
 
 def get_months_between_date_parts(date_parts):
@@ -842,7 +842,17 @@ def html_table_to_csv(html):
     return filepath, filename
 
 
-def export_board_report_csv(request, book_data, journal_data, most_accessed_articles, start_month, end_month):
+def export_board_report_csv(
+        request,
+        book_data,
+        journal_data,
+        most_accessed_articles,
+        start_month,
+        end_month,
+        book_dates,
+        current_year,
+        previous_year,
+):
     elements = [
         'header.html',
         'books.html',
@@ -857,6 +867,9 @@ def export_board_report_csv(request, book_data, journal_data, most_accessed_arti
         'book_data': book_data,
         'journal_data': journal_data,
         'most_accessed_articles': most_accessed_articles,
+        'book_dates': book_dates,
+        'current_year': current_year,
+        'previous_year': previous_year,
     }
 
     html = ''
