@@ -42,4 +42,7 @@ urlpatterns = [
     url(r'^citations/journal/(?P<journal_id>\d+)/article/(?P<article_id>\d+)/$',
         views.report_article_citing_works,
         name='report_article_citing_works'),
+    url(r'^crossref/(?P<journal_id>\d+|)$',
+        views.report_crossref_dois,
+        name='reporting_crossref_dois'),
 ]

@@ -1,5 +1,6 @@
-from django.shortcuts import render, reverse, redirect, get_object_or_404
 from django.db.models import Q
+from django.http import HttpResponse
+from django.shortcuts import render, reverse, redirect, get_object_or_404
 from django.utils import translation
 
 from plugins.reporting import forms, logic
@@ -349,6 +350,22 @@ def report_article_citing_works(request, journal_id, article_id):
         'article': article,
         'links': article.articlelink_set.all(),
     }
-    
+
     return render(request, template, context)
+
+
+@editor_user_required
+def report_crossref_dois(request, journal_id=None):
+    """ A view that returns a report for Crossref mapping DOIs to URLS in tsv
+    :param journal_id: A journal ID to filter the DOI identifiers by
+    :return: an HttpResponse
+    """
+    journal = None
+    if journal_id:
+        journal = get_object_or_404(jm.Journal, pk=journal_id)
+
+    response = HttpResponse(content_type='text/tsv')
+    response['Content-Disposition'] = 'attachment; filename="DOI_urls.tsv"'
+    logic.write_doi_tsv_report(to_write=response, journal=journal)
+    return response
 
