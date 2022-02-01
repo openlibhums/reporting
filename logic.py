@@ -25,6 +25,7 @@ from utils.function_cache import cache
 from journal import models as jm
 from review import models as rm
 from metrics import models as mm
+from identifiers import models as id_models
 
 
 def get_first_day(dt, d_years=0, d_months=0):
@@ -608,3 +609,34 @@ def get_journal_citations(journal):
     journal.citation_count = counter
 
     return articles
+
+
+def write_doi_tsv_report(to_write, journal=None):
+    """ Writes a TSV of DOI and pointed URLS to the passed object
+    :param to_write: An file-like object that can be written to
+    :param journal: An optional Journal object to filter the report by
+    :return: The Same file-like object passed as an argument
+    """
+    writer = csv.writer(to_write, delimiter="\t", lineterminator='\n')
+    identifiers = id_models.Identifier.objects.filter(
+        article__isnull=False,
+        article__stage=sm.STAGE_PUBLISHED,
+        id_type="doi",
+    )
+
+    if journal:
+        identifiers = identifiers.filter(article__journal=journal)
+    identifiers = identifiers.order_by("article__journal", "id")
+
+    writer.writerow(["DOI", "URL"])
+    for identifier in identifiers:
+        article = identifier.article
+        writer.writerow((identifier.identifier, article.url))
+        # Supplementary file DOIs
+        for supp_file in core_models.SupplementaryFile.objects.filter(
+            file__article_id=article.pk,
+            doi__isnull=False,
+        ):
+            writer.writerow((supp_file.doi, supp_file.url()))
+
+    return to_write
