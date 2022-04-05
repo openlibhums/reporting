@@ -98,8 +98,10 @@
                         <li class="accordion-item" data-accordion-item>
                             <a href="#" class="accordion-title">Crossref DOI URLs</a>
                             <div class="accordion-content" data-tab-content>
-                                <p>Generates a TSV file that can be shared with Crossref to bulk update URLs linked to DOIs stored in Janeway</p>
-                                <a class="button" href="{% url 'reporting_crossref_dois' request.journal.pk %}">Download Report</a>
+                                <p>Generate a TSV file that can be shared with Crossref to bulk update URLs linked to DOIs stored in Janeway</p>
+                                <a class="button" href="{% url 'reporting_crossref_dois' request.journal.pk %}">Download DOI Urls</a>
+                                <p>Generate a TSV file that can be shared to bulk update Full-text URLs for updating CrossCheck</p>
+                                <a class="button" href="{% url 'reporting_crossref_dois_crosscheck' request.journal.pk %}">Download Crosscheck URLs</a>
                             </div>
                         </li>
                     </ul>

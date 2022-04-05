@@ -45,4 +45,7 @@ urlpatterns = [
     url(r'^crossref/(?P<journal_id>\d+|)$',
         views.report_crossref_dois,
         name='reporting_crossref_dois'),
+    url(r'^crossref/(?P<journal_id>\d+|)/crosscheck$',
+        views.report_crossref_dois_crosscheck,
+        name='reporting_crossref_dois_crosscheck'),
 ]

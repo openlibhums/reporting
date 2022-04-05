@@ -5,6 +5,7 @@ from dateutil.relativedelta import relativedelta
 import datetime
 from datetime import datetime
 
+from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
 from django.template.defaultfilters import strip_tags
@@ -611,10 +612,11 @@ def get_journal_citations(journal):
     return articles
 
 
-def write_doi_tsv_report(to_write, journal=None):
+def write_doi_tsv_report(to_write, journal=None, crosscheck=False):
     """ Writes a TSV of DOI and pointed URLS to the passed object
     :param to_write: An file-like object that can be written to
     :param journal: An optional Journal object to filter the report by
+    :param crosscheck: A bool flag for returning URLs to full-text instead
     :return: The Same file-like object passed as an argument
     """
     writer = csv.writer(to_write, delimiter="\t", lineterminator='\n')
@@ -631,12 +633,24 @@ def write_doi_tsv_report(to_write, journal=None):
     writer.writerow(["DOI", "URL"])
     for identifier in identifiers:
         article = identifier.article
-        writer.writerow((identifier.identifier, article.url))
+        if crosscheck and article.pdfs.exists():
+            path = reverse('serve_article_pdf',
+                kwargs={
+                    "identifier_type": "id",
+                    "identifier": article.id
+                }
+            )
+            url = article.journal.site_url(path)
+        else:
+            url = article.url
+        writer.writerow((identifier.identifier, url))
+
         # Supplementary file DOIs
-        for supp_file in core_models.SupplementaryFile.objects.filter(
-            file__article_id=article.pk,
-            doi__isnull=False,
-        ):
-            writer.writerow((supp_file.doi, supp_file.url()))
+        if not crosscheck:
+            for supp_file in core_models.SupplementaryFile.objects.filter(
+                file__article_id=article.pk,
+                doi__isnull=False,
+            ):
+                writer.writerow((supp_file.doi, supp_file.url()))
 
     return to_write
