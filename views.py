@@ -369,3 +369,20 @@ def report_crossref_dois(request, journal_id=None):
     logic.write_doi_tsv_report(to_write=response, journal=journal)
     return response
 
+
+@editor_user_required
+def report_crossref_dois_crosscheck(request, journal_id=None):
+    """ A view that returns a report for Crosscheck mapping DOIs to URLS in tsv
+    :param journal_id: A journal ID to filter the DOI identifiers by
+    :return: an HttpResponse
+    """
+    journal = None
+    if journal_id:
+        journal = get_object_or_404(jm.Journal, pk=journal_id)
+
+    response = HttpResponse(content_type='text/tsv')
+    response['Content-Disposition'] = 'attachment; filename="DOI_urls.tsv"'
+    logic.write_doi_tsv_report(
+        to_write=response, journal=journal, crosscheck=True,
+    )
+    return response
