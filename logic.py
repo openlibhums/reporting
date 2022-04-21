@@ -194,6 +194,7 @@ def export_article_csv(articles, data):
     all_rows.append(row)
 
     main_header_row = [
+        'ID',
         'Title',
         'Section',
         'Date Submitted',
@@ -207,12 +208,13 @@ def export_article_csv(articles, data):
 
     for article in articles:
         row = [
+            article.pk,
             strip_tags(article.title),
             article.section.name if article.section else 'No Section',
             article.date_submitted,
             article.date_accepted,
             article.date_published,
-            article.editorial_delta.days,
+            article.editorial_delta.days if article.editorial_delta else '',
             article.views.count(),
             article.downloads.count(),
         ]
