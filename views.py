@@ -272,6 +272,8 @@ def report_citations(request):
     all_articles = sm.Article.objects.filter(
         articlelink__year__isnull=False,
     ).distinct()
+    if request.journal:
+        all_articles = all_articles.filter(journal=request.journal)
 
     if not request.GET.get('all_time', False) == 'on':
         data = all_articles.filter(articlelink__year=year).distinct()
