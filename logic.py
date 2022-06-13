@@ -366,6 +366,10 @@ def press_journal_report_data(journals, start_date, end_date):
     for journal in journals:
         articles = sm.Article.objects.filter(journal=journal)
 
+        articles_in_journal = articles.filter(
+            date_submitted__lte=end_date,
+        )
+
         submissions = articles.exclude(
             stage=sm.STAGE_PUBLISHED,
         ).filter(
@@ -374,7 +378,6 @@ def press_journal_report_data(journals, start_date, end_date):
         )
 
         published_articles = articles.filter(
-            stage=sm.STAGE_PUBLISHED,
             date_published__gte=start_date,
             date_published__lte=end_date,
         )
@@ -399,6 +402,7 @@ def press_journal_report_data(journals, start_date, end_date):
         data.append({
             'journal': journal,
             'articles': articles,
+            'submitted_articles': articles_in_journal,
             'published_articles': published_articles,
             'submissions': submissions,
             'rejected_articles': rejected_articles,
@@ -468,7 +472,10 @@ def journal_usage_by_month_data(date_parts):
     data = []
 
     for journal in journals:
-        journal_metrics = metrics.filter(article__journal=journal)
+        journal_metrics = metrics.filter(
+            article__journal=journal,
+            type__in=['view', 'download']
+        )
         journal_data = {'journal': journal, 'all_metrics': journal_metrics}
 
         date_metrics_list = []
@@ -656,3 +663,17 @@ def write_doi_tsv_report(to_write, journal=None, crosscheck=False):
                 writer.writerow((supp_file.doi, supp_file.url()))
 
     return to_write
+
+
+def license_report(start, end):
+    licenses = []
+
+    articles = sm.Article.objects.filter(
+        date_published__lte=end,
+        date_published__gte=start,
+    ).values('license', 'license__name', 'license__journal__code').annotate(
+        lcount=Count('license')
+    ).order_by('lcount')
+
+    print(articles)
+    return articles

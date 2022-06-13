@@ -104,6 +104,13 @@
                                 <a class="button" href="{% url 'reporting_crossref_dois_crosscheck' request.journal.pk %}">Download Crosscheck URLs</a>
                             </div>
                         </li>
+                        <li class="accordion-item" data-accordion-item>
+                            <a href="#" class="accordion-title">License Report</a>
+                            <div class="accordion-content" data-tab-content>
+                                <p>This report shows the number of article using licenses between two dates.</p>
+                                <a href="{% url 'reporting_license' %}">View Report</a>
+                            </div>
+                        </li>
                     </ul>
                 </div>
             </div>

@@ -55,7 +55,6 @@ def report_articles(request, journal_id):
     start_date, end_date = logic.get_start_and_end_date(request)
     articles = logic.get_articles(journal, start_date, end_date)
 
-
     date_form = forms.DateForm(
         initial={'start_date': start_date, 'end_date': end_date}
     )
@@ -386,3 +385,31 @@ def report_crossref_dois_crosscheck(request, journal_id=None):
         to_write=response, journal=journal, crosscheck=True,
     )
     return response
+
+
+@editor_user_required
+def report_licenses(request):
+    """
+    Displays License information per journal and across all journals
+    :param request: HttpRequest object
+    :param journal_id: int, pk of a Journal object
+    :return: HttpResponse or HttpRedirect
+    """
+    start_date, end_date = logic.get_start_and_end_date(request)
+
+    date_form = forms.DateForm(
+        initial={'start_date': start_date, 'end_date': end_date}
+    )
+
+    data = logic.license_report(start_date, end_date)
+
+    template = 'reporting/report_licenses.html'
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'date_form': date_form,
+        'data': data,
+    }
+
+    return render(request, template, context)
+

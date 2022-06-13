@@ -1,0 +1,59 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block title-section %}Reports{% endblock %}
+{% block title-sub %}License Report{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li><a href="{% url 'reporting_license' %}">License Report</a></li>
+{% endblock %}
+
+{% block body %}
+    <div class="box">
+        <div class="title-area">
+            <h2>Filter by Dates</h2>
+        </div>
+        <div class="content">
+            <div class="row expanded">
+                <form method="GET">
+                    {{ date_form.errors|safe }}
+                    <div class="large-2 columns">
+                        {{ date_form.start_date }}
+                    </div>
+                    <div class="large-2 columns">
+                        {{ date_form.end_date }}
+                    </div>
+                    <div class="large-1 columns end">
+                        <button class="button">Submit</button>
+                    </div>
+                </form>
+            </div>
+            <div class="row expanded">
+                <table id="licensereport">
+                    <thead>
+                        <tr>
+                            <th>License</th>
+                            <th>Journal</th>
+                            <th>Articles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for license in data %}
+                        <tr>
+                            <td>{{ license.license__name }}</td>
+                            <td>{{ license.license__journal__code }}</td>
+                            <td>{{ license.lcount }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+{% include "elements/datatables.html" with target="#licensereport" %}
+{% endblock js %}
