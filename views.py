@@ -244,6 +244,7 @@ def report_review(request, journal_id=None):
         articles = sm.Article.objects.all()
 
     data = logic.peer_review_data(articles, start_date, end_date)
+    review_stats = logic.peer_review_stats(start_date, end_date, journal)
 
     if request.POST:
         return logic.export_review_data(data)
@@ -253,6 +254,7 @@ def report_review(request, journal_id=None):
         'journal': journal,
         'date_form': date_form,
         'data': data,
+        'review_stats': review_stats,
     }
 
     return render(request, template, context)

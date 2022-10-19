@@ -11,6 +11,21 @@
 {% endblock %}
 
 {% block body %}
+<style>
+    .callout-border {
+        border-left: 0.3125rem solid #8a8a8a;
+    }
+    .callout-border-success {
+        border-left: 0.3125rem solid #3adb76;
+    }
+    .callout-border-danger {
+        border-left: 0.3125rem solid #cc4b37;
+    }
+    .callout-border-primary {
+        border-left: 0.3125rem solid #1779ba;
+    }
+   </style>
+
     <div class="box">
         <div class="title-area">
             <h2>Filter by Dates</h2>
@@ -31,6 +46,42 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+    <div class="box">
+        <div class="content">
+          <div class="row expanded">
+            <div class="small-3 columns">
+                <div class="callout small callout-border-primary">
+                    <h4>Submissions</h4>
+                    <p>{{ review_stats.submitted }}</p>
+                </div>
+            </div>
+
+            <div class="small-3 columns">
+                <div class="callout small callout-border-success">
+                    <h4>Accepted Submissions</h4>
+                    <p>{{ review_stats.accepted }}</p>
+                </div>
+            </div>
+            <div class="small-3 columns">
+                <div class="callout small callout-border-danger">
+                    <h4>Rejected Submissions</h4>
+                    <p>{{ review_stats.rejected }}</p>
+                </div>
+            </div>
+
+            <div class="small-3 columns">
+                <div class="callout small callout-border-primary">
+                    <h4>Completed Review assignments</h4>
+                    <p>{{ review_stats.completed_reviews }}</p>
+                </div>
+            </div>
+          </div>
+        </div>
+    </div>
+    <div class="box">
+        <div class="content">
             <div class="row expanded">
                 <table id="productionreport">
                     <thead>

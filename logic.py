@@ -542,6 +542,31 @@ def peer_review_data(articles, start_date, end_date):
     return data
 
 
+@cache(300)
+def peer_review_stats(start_date, end_date, journal=None):
+    """Returns peer review statistics for the journal in the given period"""
+    submitted_articles = sm.Article.objects.filter(
+        date_submitted__gte=start_date,
+        date_submitted__lte=end_date,
+    )
+    if journal:
+        submitted_articles = submitted_articles.filter(journal=journal)
+
+    completed_reviews = rm.ReviewAssignment.objects.filter(
+        article__in=submitted_articles,
+        date_complete__isnull=False,
+        date_declined__isnull=True,
+    )
+    stats = {
+        "submitted": submitted_articles.count(),
+        "accepted": submitted_articles.filter(date_accepted__isnull=False).count(),
+        "rejected": submitted_articles.filter(date_declined__isnull=False).count(),
+        "completed_reviews": completed_reviews.count()
+    }
+
+    return stats
+
+
 def export_review_data(data):
     all_rows = list()
 
