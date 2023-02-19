@@ -92,7 +92,7 @@ def report_journal_usage_by_month(request):
         }
     )
 
-    data, dates = logic.journal_usage_by_month_data(date_parts)
+    data, dates, max_, min_ = logic.journal_usage_by_month_data(date_parts)
 
     if request.POST:
         return logic.export_usage_by_month(data, dates)
@@ -102,6 +102,8 @@ def report_journal_usage_by_month(request):
         'month_form': month_form,
         'data': data,
         'dates': dates,
+        "maximum": max_,
+        "minimum": min_,
     }
 
     return render(request, template, context)
