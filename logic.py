@@ -403,60 +403,67 @@ def get_most_viewed_article(metrics):
 def press_journal_report_data(journals, start_date, end_date):
     data = []
 
-    for journal in journals:
-        articles = sm.Article.objects.filter(journal=journal)
 
-        articles_in_journal = articles.filter(
-            date_submitted__lte=end_date,
-        )
+    submissions_subq = sm.Article.objects.filter(
+        journal=OuterRef("id"),
+        date_submitted__gte=start_date,
+        date_submitted__lte=end_date,
+    ).annotate(
+        count=Func(F('id'), function="Count")
+    # This order by seems pointles (and it is) but it is necessary to address
+    # a bug of the ORM with postgres for django < 2.0
+    # https://github.com/django/django/commit/daf2bd3efe53cbfc1c9fd00222b8315708023792
+    # TODO: django 2.0+ - Remove pointless order by statement that slows query
+    ).order_by("count").values("count")
 
-        submissions = articles.exclude(
-            stage=sm.STAGE_PUBLISHED,
-        ).filter(
-            date_submitted__gte=start_date,
-            date_submitted__lte=end_date,
-        )
+    published_articles_subq = sm.Article.objects.filter(
+        journal=OuterRef("id"),
+        date_published__gte=start_date,
+        date_published__lte=end_date,
+    ).annotate(
+        count=Func(F('id'), function="Count")
+    ).order_by("count").values("count")
 
-        published_articles = articles.filter(
-            date_published__gte=start_date,
-            date_published__lte=end_date,
-        )
+    rejected_articles_subq = sm.Article.objects.filter(
+        journal=OuterRef("id"),
+        stage=sm.STAGE_REJECTED,
+        date_declined__gte=start_date,
+        date_declined__lte=end_date,
+    ).order_by().annotate(
+        count=Func(F('id'), function="Count")
+    ).order_by("count").values("count")
 
-        rejected_articles = articles.filter(
-            stage=sm.STAGE_REJECTED,
-            date_declined__gte=start_date,
-            date_declined__lte=end_date,
-        )
+    views_subq = mm.ArticleAccess.objects.filter(
+        article__journal=OuterRef("id"),
+        accessed__gte=start_date,
+        accessed__lte=end_date,
+        type="view",
+    ).order_by().annotate(
+        count=Func(F('id'), function="Count")
+    ).order_by("count").values("count")
 
-        metrics = mm.ArticleAccess.objects.filter(
-            article__journal=journal,
-            accessed__gte=start_date,
-            accessed__lte=end_date,
-        )
+    downloads_subq = mm.ArticleAccess.objects.filter(
+        article__journal=OuterRef("id"),
+        accessed__gte=start_date,
+        accessed__lte=end_date,
+        type="download",
+    ).order_by().annotate(
+        count=Func(F('id'), function="Count")
+    ).order_by("count").values("count")
 
-        most_viewed_article = get_most_viewed_article(metrics)
-
-        views = metrics.filter(type='view')
-        downloads = metrics.filter(type='download')
-
-        data.append({
-            'journal': journal,
-            'articles': articles,
-            'submitted_articles': articles_in_journal,
-            'published_articles': published_articles,
-            'submissions': submissions,
-            'rejected_articles': rejected_articles,
-            'views': views,
-            'downloads': downloads,
-            'most_viewed_article': most_viewed_article,
-            'users': journal.journal_users(),
-        })
-
-    return data
+    journals = journals.annotate(
+        submitted=Subquery(submissions_subq, output_field=IntegerField()),
+        published=Subquery(published_articles_subq, output_field=IntegerField()),
+        rejected=Subquery(rejected_articles_subq, output_field=IntegerField()),
+        total_views=Subquery(views_subq, output_field=IntegerField()),
+        total_downloads=Subquery(downloads_subq, output_field=IntegerField()),
+    )
 
 
-def export_press_csv(data_dict):
-    all_rows = list()
+    return journals
+
+
+def export_press_csv(journals):
     header_row = [
         'Journal',
         'Submissions',
@@ -465,30 +472,21 @@ def export_press_csv(data_dict):
         'Number of Users',
         'Views',
         'Downloads',
-        'Most Accessed Article',
     ]
-    all_rows.append(header_row)
 
-    for data in data_dict:
 
-        most_viewed_article_string = '{title} ({count})'.format(
-            title=data['most_viewed_article'][0]['article__title']  if data['most_viewed_article'] else '',
-            count=data['most_viewed_article'][0]['total'] if data['most_viewed_article'] else ''
-        )
+    rows = ((
+        journal.name,
+        journal.submitted,
+        journal.published,
+        journal.rejected,
+        len(journal.journal_users()),
+        journal.total_views,
+        journal.total_downloads,
+    ) for journal in journals)
+    filename = f'press-report-{timezone.now()}.csv'
 
-        row = [
-            data.get('journal').name,
-            data.get('submissions').count(),
-            data.get('published_articles').count(),
-            data.get('rejected_articles').count(),
-            len(data.get('users')),
-            data.get('views').count(),
-            data.get('downloads').count(),
-            most_viewed_article_string,
-        ]
-        all_rows.append(row)
-
-    return export_csv(all_rows)
+    return stream_csv(header_row, rows, filename=filename)
 
 
 @cache(600)
