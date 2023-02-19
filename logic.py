@@ -1,10 +1,12 @@
 import csv
+from io import StringIO
 import os
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 import datetime
 from datetime import datetime
 
+from django.http import StreamingHttpResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.conf import settings
@@ -156,6 +158,37 @@ def export_csv(rows):
         filename
     )
 
+def stream_csv(headers, iterable, filename=None):
+    """ A more performant version of export_csv
+    Instead of loading all rows in memory and flushing to a file before serving,
+    it serves a StreamingHttpResponse to which we yield each row individually
+    :headers: a list or tuple of headers
+    :iterable: an iterable that yields lists or tuples of row data
+    """
+    filename = filename or '{0}.csv'.format(timezone.now())
+    def response_streamer():
+        # write each row to an in-memory file that is yield immediately
+
+        # Headers
+        file_like = StringIO()
+        csv_writer = csv.writer(file_like)
+        csv_writer.writerow(headers)
+        yield file_like.getvalue()
+
+        # Rows
+        for row in iterable:
+            file_like = StringIO()
+            csv_writer = csv.writer(file_like)
+            csv_writer.writerow(row)
+            yield file_like.getvalue()
+
+    response = StreamingHttpResponse(
+        response_streamer(),
+        content_type="text/csv",
+
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 def export_journal_csv(journals):
     all_rows = list()
