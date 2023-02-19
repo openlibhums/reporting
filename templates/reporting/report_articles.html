@@ -38,37 +38,37 @@
                 <div class="large-2 columns">
                     <div class="callout success">
                         <h4>Articles</h4>
-                        <p>{{ data.submitted_articles.count }}</p>
+                        <p>{{ journal.article_set.count }}</p>
                     </div>
                 </div>
                 <div class="large-2 columns">
                     <div class="callout success">
                         <h4>Submissions</h4>
-                        <p>{{ data.submissions.count }}</p>
+                        <p>{{ journal.submitted }}</p>
                     </div>
                 </div>
                 <div class="large-2 columns">
                     <div class="callout success">
                         <h4>Publications</h4>
-                        <p>{{ data.published_articles.count }}</p>
+                        <p>{{ journal.published }}</p>
                     </div>
                 </div>
                 <div class="large-2 columns">
                     <div class="callout success">
                         <h4>Rejections</h4>
-                        <p>{{ data.rejected_articles.count }}</p>
+                        <p>{{ journal.rejected }}</p>
                     </div>
                 </div>
                 <div class="large-2 columns">
                     <div class="callout success">
                         <h4>Views</h4>
-                        <p>{{ data.views.count }}</p>
+                        <p>{{ journal.total_views }}</p>
                     </div>
                 </div>
                 <div class="large-2 columns">
                     <div class="callout success">
                         <h4>Downloads</h4>
-                        <p>{{ data.downloads.count }}</p>
+                        <p>{{ journal.total_downloads }}</p>
                     </div>
                 </div>
 
@@ -86,8 +86,11 @@
                             <th>Date Accepted</th>
                             <th>Date Published</th>
                             <th>Days to Publication</th>
-                            <th>Views</th>
-                            <th>Downloads</th>
+                            <th>Abstract views</th>
+                            <th>HTML Views</th>
+                            <th>PDF Views</th>
+                            <th>PDF Downloads</th>
+                            <th>Other Downloads</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -100,8 +103,11 @@
                                 <td>{{ article.date_accepted }}</td>
                                 <td>{{ article.date_published }}</td>
                                 <td>{{ article.editorial_delta.days }}</td>
-                                <td>{{ article.views|length }}</td>
-                                <td>{{ article.downloads|length }}</td>
+                                <td>{{ article.abstract_views|length }}</td>
+                                <td>{{ article.html_views }}</td>
+                                <td>{{ article.pdf_views }}</td>
+                                <td>{{ article.pdf_downloads }}</td>
+                                <td>{{ article.other_downloads }}</td>
                             </tr>
                         {% endfor %}
                         </tbody>

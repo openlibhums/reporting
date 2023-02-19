@@ -1,5 +1,6 @@
 import csv
 from io import StringIO
+from itertools import chain
 import os
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
@@ -109,19 +110,64 @@ def get_articles(journal, start_date, end_date):
     if journal:
         articles = articles.filter(journal=journal)
 
-    for article in articles:
-        article.views = mm.ArticleAccess.objects.filter(
-            article=article,
-            accessed__gte=start_date,
-            accessed__lte=end_date,
-            type='view'
-        )
-        article.downloads = mm.ArticleAccess.objects.filter(
-            article=article,
-            accessed__gte=start_date,
-            accessed__lte=end_date,
-            type='download'
-        )
+    abstract_page_views = mm.ArticleAccess.objects.filter(
+        article=OuterRef("id"),
+        accessed__gte=start_date,
+        accessed__lte=end_date,
+        galley_type__isnull=True,
+    ).order_by().annotate(
+        count=Func(F('id'), function="Count")
+    ).order_by("count").values("count")
+
+    html_views = mm.ArticleAccess.objects.filter(
+        article=OuterRef("id"),
+        accessed__gte=start_date,
+        accessed__lte=end_date,
+        galley_type__in={"html", "xml"},
+        type="view",
+    ).order_by().annotate(
+        count=Func(F('id'), function="Count")
+    ).order_by("count").values("count")
+
+    pdf_views = mm.ArticleAccess.objects.filter(
+        article=OuterRef("id"),
+        accessed__gte=start_date,
+        accessed__lte=end_date,
+        galley_type="pdf",
+        type="view",
+    ).annotate(
+        count=Func(F('id'), function="Count")
+    ).values("count")
+
+    pdf_downloads = mm.ArticleAccess.objects.filter(
+        article=OuterRef("id"),
+        accessed__gte=start_date,
+        accessed__lte=end_date,
+        galley_type="pdf",
+        type="download",
+    ).order_by().annotate(
+        count=Func(F('id'), function="Count")
+    ).order_by("count").values("count")
+
+    other_downloads = mm.ArticleAccess.objects.filter(
+        article=OuterRef("id"),
+        accessed__gte=start_date,
+        accessed__lte=end_date,
+        type="view",
+    ).exclude(
+        galley_type__in={"pdf"},
+    ).order_by().annotate(
+        count=Func(F('id'), function="Count")
+    ).order_by("count").values("count")
+
+    articles = articles.annotate(
+        abstract_views=Subquery(abstract_page_views, output_field=IntegerField()),
+        html_views=Subquery(html_views, output_field=IntegerField()),
+        pdf_views=Subquery(pdf_views, output_field=IntegerField()),
+        pdf_downloads=Subquery(pdf_downloads, output_field=IntegerField()),
+        other_downloads=Subquery(other_downloads, output_field=IntegerField()),
+    )
+
 
     return articles
 
@@ -167,7 +213,7 @@ def stream_csv(headers, iterable, filename=None):
     """
     filename = filename or '{0}.csv'.format(timezone.now())
     def response_streamer():
-        # write each row to an in-memory file that is yield immediately
+        """Writes each row to an in-memory file that is yielded immediately"""
 
         # Headers
         file_like = StringIO()
@@ -210,8 +256,7 @@ def export_journal_csv(journals):
     return export_csv(all_rows)
 
 
-def export_article_csv(articles, data):
-    all_rows = list()
+def export_article_csv(articles, journal):
 
     info_header_row = [
         'Articles',
@@ -221,17 +266,15 @@ def export_article_csv(articles, data):
         'Views',
         'Downloads',
     ]
-    all_rows.append(info_header_row)
 
-    row = [
-        data[0].get('articles').count(),
-        data[0].get('submissions').count(),
-        data[0].get('published_articles').count(),
-        data[0].get('rejected_articles').count(),
-        data[0].get('views').count(),
-        data[0].get('downloads').count(),
+    journal_row = [
+        journal.article_set.count(),
+        journal.submitted,
+        journal.published,
+        journal.rejected,
+        journal.total_views,
+        journal.total_downloads,
     ]
-    all_rows.append(row)
 
     main_header_row = [
         'ID',
@@ -240,27 +283,33 @@ def export_article_csv(articles, data):
         'Date Submitted',
         'Date Accepted',
         'Date Published',
-        'Days to Publication'
-        'Views',
-        'Downloads',
+        'Days to Publication',
+        'Abstract Views',
+        'HTML Views',
+        'PDF Views',
+        'PDF Downloads',
+        'Other Downloads',
     ]
-    all_rows.append(main_header_row)
 
-    for article in articles:
-        row = [
-            article.pk,
-            strip_tags(article.title),
-            article.section.name if article.section else 'No Section',
-            article.date_submitted,
-            article.date_accepted,
-            article.date_published,
-            article.editorial_delta.days if article.editorial_delta else '',
-            article.views.count(),
-            article.downloads.count(),
-        ]
-        all_rows.append(row)
+    iter_articles = ((
+        article.pk,
+        strip_tags(article.title),
+        article.section.name if article.section else 'No Section',
+        article.date_submitted,
+        article.date_accepted,
+        article.date_published,
+        article.editorial_delta.days if article.editorial_delta else '',
+        article.abstract_views,
+        article.html_views,
+        article.pdf_views,
+        article.pdf_downloads,
+        article.other_downloads,
+    ) for article in articles)
 
-    return export_csv(all_rows)
+    all_rows = chain([journal_row, main_header_row], iter_articles)
+    filename = f'articles-report-{journal.code}-{timezone.now()}.csv'
+
+    return stream_csv(info_header_row, all_rows, filename=filename)
 
 
 def export_production_csv(production_assignments):
