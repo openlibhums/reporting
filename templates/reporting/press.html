@@ -58,15 +58,15 @@
                         </tr>
                         </thead>
                         <tbody>
-                        {% for data in data_dict %}
+                        {% for journal in journals %}
                             <tr>
-                                <td>{{ data.journal.name }}</td>
-                                <td>{{ data.submissions|length }}</td>
-                                <td>{{ data.published_articles|length }}</td>
-                                <td>{{ data.rejected_articles|length }}</td>
-                                <td>{{ data.users|length }}</td>
-                                <td>{{ data.views|length }}</td>
-                                <td>{{ data.downloads|length }}</td>
+                                <td>{{ journal.name }}</td>
+                                <td>{{ journal.submitted }}</td>
+                                <td>{{ journal.published }}</td>
+                                <td>{{ journal.rejected }}</td>
+                                <td>{{ journal.journal_users|length }}</td>
+                                <td style="text-align:right">{{ journal.total_views }}</td>
+                                <td style="text-align:right">{{ journal.total_downloads }}</td>
                                 <td>{% if data.most_viewed_article %}
                                     {{ data.most_viewed_article.0.article__title|safe }}
                                     ({{ data.most_viewed_article.0.total }}){% else %}

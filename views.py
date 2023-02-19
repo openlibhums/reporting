@@ -204,20 +204,19 @@ def press(request):
         is_remote=False,
     ).order_by('code')
 
-    data_dict = logic.press_journal_report_data(
+    journals = logic.press_journal_report_data(
         journals,
         start_date,
         end_date,
     )
 
     if request.POST:
-        return logic.export_press_csv(data_dict)
+        return logic.export_press_csv(journals)
 
     template = 'reporting/press.html'
     context = {
         'date_form': date_form,
         'journals': journals,
-        'data_dict': data_dict,
     }
 
     return render(request, template, context)
