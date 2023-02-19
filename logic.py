@@ -13,10 +13,17 @@ from django.db.models import (
     DurationField,
     ExpressionWrapper,
     F,
+    IntegerField,
     Min,
+    Case,
     Count,
     Q,
+    Subquery,
+    Func,
+    When,
+    OuterRef
 )
+from django.db.models.functions import TruncMonth
 
 from submission import models as sm
 from metrics import models as mm
@@ -68,8 +75,8 @@ def get_start_and_end_months(request):
         'end_month', get_current_month_year()
     )
 
-    start_month_m, start_month_y = start_month.split('-')
-    end_month_m, end_month_y = end_month.split('-')
+    start_month_y, start_month_m = start_month.split('-')
+    end_month_y, end_month_m = end_month.split('-')
 
     date_parts = {
         'start_month_m': start_month_m,
@@ -96,7 +103,7 @@ def get_articles(journal, start_date, end_date):
     ).select_related(
         'section'
     ).annotate(editorial_delta=f_editorial_delta)
-   
+
     if journal:
         articles = articles.filter(journal=journal)
 
@@ -453,45 +460,128 @@ def export_press_csv(data_dict):
 
 @cache(600)
 def journal_usage_by_month_data(date_parts):
-    journals = jm.Journal.objects.filter(is_remote=False)
+    """An attempt to make the view above more performant"""
+    journals = jm.Journal.objects.filter(is_remote=False, hide_from_press=False)
+    journal_id_map = {j.id: j for j in journals}
+    data = {}
     metrics = mm.ArticleAccess.objects.all()
 
-    start_str = '{}-01'.format(date_parts.get('start_unsplit'))
-    end_str = '{}-27'.format(date_parts.get('end_unsplit'))
 
-    start = datetime.strptime(start_str, '%Y-%m-%d').date()
-    end = datetime.strptime(end_str, '%Y-%m-%d').date()
+    start = timezone.make_aware(timezone.datetime(
+        int(date_parts["start_month_y"]),
+        int(date_parts["start_month_m"]),
+        1
+    ))
+    end = timezone.make_aware(timezone.datetime(
+        int(date_parts["end_month_y"]),
+        int(date_parts["end_month_m"]),
+        1
+        # get first day of next month at 00:00:00
+    ) + relativedelta(months=1))
+    
+
+    journal_metrics = metrics.filter(
+        article__journal__in=journals,
+        type__in=['view', 'download'],
+        accessed__gte=start,
+        accessed__lt=end,
+    ).exclude(
+        galley_type__isnull=True,
+    ).annotate(
+        month=TruncMonth('accessed'),
+    ).values(
+        # There is no group by in the ORM, this call will translate into:
+        # GROUP BY "submission_article"."journal_id",
+        #   DATE_TRUNC('month', "metrics_articleaccess"."accessed")
+        "article__journal", "month",
+    ).annotate(
+        # This annotation has to take place after the values above so that it is
+        # done over the grouped by clause
+        total=Count("id"),
+    # This `values` call is turned into the SELECT clause
+    ).values("article__journal", "month", "total"
+    ).order_by("article__journal", "month")
 
     dates = [start]
+    requested_start = start # preserve original requested start
 
     while start < end:
         start += relativedelta(months=1)
         if start < end:
             dates.append(start)
 
-    data = []
+    current_journal = None
+    maximum = minimum = 0
+    for row in journal_metrics:
+        journal = journal_id_map[row["article__journal"]]
+        data.setdefault(journal, [])
+        if journal != current_journal:  # if we have switched to another journal
+            # fill gaps if a journal history doesn't have history in the period
+            if row["month"] != requested_start:
+                delta = relativedelta(row["month"].date(), requested_start.date())
+                months_delta = (delta.years * 12) + delta.months
+                for _ in range(months_delta):
+                    data[journal].append(0)
+
+        month_total = row["total"]
+        data[journal].append(month_total)
+        if month_total > maximum:
+            maximum = month_total
+        if month_total < minimum:
+            minimum = month_total
+        current_journal = journal
+
+    return data, dates, maximum, minimum
+
+@cache(600)
+def ajournal_usage_by_month_data(date_parts):
+    journals = jm.Journal.objects.filter(is_remote=False, hide_from_press=False)
+    data = {}
+
+
+    start = timezone.datetime(
+        int(date_parts["start_month_y"]),
+        int(date_parts["start_month_m"]),
+        1
+    )
+    end = timezone.datetime(
+        int(date_parts["end_month_y"]),
+        # get first day of next month at 00:00:00
+        int(date_parts["end_month_m"]) + 1,
+        1
+    )
+    dates = []
+
+    while start < end:
+        if start < end:
+            # e.g: 2022-01, 2022-02...
+            annotation_key = start.strftime("%Y-%m")
+            dates.append(annotation_key)
+            next_month = start + relativedelta(months=1)
+
+        # Annotate each journal with the metrics for this date range
+        journals = journals.annotate(**{
+            annotation_key: Subquery(
+                build_range_metrics_subq(start, next_month),
+                output_field=IntegerField(),
+            )
+        })
+        start = next_month
 
     for journal in journals:
-        journal_metrics = metrics.filter(
-            article__journal=journal,
-            type__in=['view', 'download']
-        )
-        journal_data = {'journal': journal, 'all_metrics': journal_metrics}
+        # transform the data into tabular format for the template/CSV
+        data[journal] = [getattr(journal, date, 0) for date in dates]
 
-        date_metrics_list = []
-
-        for d in dates:
-            date_metrics = journal_metrics.filter(
-                accessed__month=d.month,
-                accessed__year=d.year,
-            )
-            date_metrics_list.append(date_metrics.count())
-
-        journal_data['date_metrics'] = date_metrics_list
-
-        data.append(journal_data)
 
     return data, dates
+
+def build_range_metrics_subq(start, end):
+    return mm.ArticleAccess.objects.filter(
+        article__journal=OuterRef("id"),
+        accessed__range=(start, end),
+    ).order_by().annotate(
+        count=Func(F('id'), function='Count', output_field=IntegerField()),
+    ).values('count')
 
 
 def export_usage_by_month(data, dates):
@@ -505,12 +595,12 @@ def export_usage_by_month(data, dates):
 
     all_rows.append(header_row)
 
-    for d in data:
+    for journal, metrics in data.items():
         row = [
-            d.get('journal').name,
+            journal.name,
         ]
 
-        for dm in d.get('date_metrics'):
+        for dm in metrics:
             row.append(dm)
 
         all_rows.append(row)
