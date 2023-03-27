@@ -3,11 +3,11 @@ from utils import models
 PLUGIN_NAME = 'reporting'
 DESCRIPTION = 'This is a plugin for reporting on articles in Janeway.'
 AUTHOR = 'Andy Byers'
-VERSION = '1.1'
+VERSION = '1.2'
 SHORT_NAME = 'reporting'
 DISPLAY_NAME = 'reporting'
 MANAGER_URL = 'reporting_index'
-JANEWAY_VERSION = "1.3.6"
+JANEWAY_VERSION = "1.5.0"
 
 
 def get_self():
