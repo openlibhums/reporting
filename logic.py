@@ -153,7 +153,7 @@ def get_articles(journal, start_date, end_date):
         article=OuterRef("id"),
         accessed__gte=start_date,
         accessed__lte=end_date,
-        type="view",
+        type="download",
     ).exclude(
         galley_type__in={"pdf"},
     ).order_by().annotate(
@@ -558,7 +558,7 @@ def journal_usage_by_month_data(date_parts):
         1
         # get first day of next month at 00:00:00
     ) + relativedelta(months=1))
-    
+
 
     journal_metrics = metrics.filter(
         article__journal__in=journals,
