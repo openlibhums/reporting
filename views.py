@@ -58,18 +58,16 @@ def report_articles(request, journal_id):
     :return: HttpResponse or HttpRedirect
     """
     journals = models.Journal.objects.filter(id=journal_id)
+    journal = journals.first()
     if not journals.exists():
         raise Http404
     start_date, end_date = logic.get_start_and_end_date(request)
     journals = logic.press_journal_report_data(journals, start_date, end_date)
-    journal = journals.first()
     articles = logic.get_articles(journal, start_date, end_date)
 
     date_form = forms.DateForm(
         initial={'start_date': start_date, 'end_date': end_date}
     )
-
-    journal = journals.first()
 
     if request.POST:
         return logic.export_article_csv(articles, journal)
