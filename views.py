@@ -1,4 +1,3 @@
-from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import (
     get_object_or_404,
@@ -7,7 +6,8 @@ from django.shortcuts import (
     render,
     reverse,
 )
-from django.utils import translation
+from django.utils import timezone
+from django.contrib.admin.views.decorators import staff_member_required
 
 from plugins.reporting import forms, logic
 from journal import models
@@ -16,6 +16,7 @@ from security.decorators import editor_user_required
 from submission import models as sm
 from journal import models as jm
 from metrics import models as mm
+from utils import plugins
 
 
 @editor_user_required
@@ -44,6 +45,7 @@ def index(request):
     context = {
         'journal_report_form': journal_report_form,
         'journals': models.Journal.objects.all(),
+        'books_plugin_installed': plugins.check_plugin_exists('books'),
     }
 
     return render(request, 'reporting/index.html', context)
@@ -363,6 +365,73 @@ def report_article_citing_works(request, journal_id, article_id):
     }
 
     return render(request, template, context)
+
+
+@staff_member_required
+def report_book_citations(request):
+    # Check if the books plugin exists or not.
+    if not plugins.check_plugin_exists('books'):
+        raise Http404("The Books plugin is not installed")
+
+    from plugins.books import models as book_models
+
+    all_book_links = mm.BookLink.objects.filter(
+        article__isnull=True,
+        object_type='book',
+    )
+    books = book_models.Book.objects.filter(
+        date_published__lte=timezone.now()
+    )
+    for book in books:
+        book.links = mm.BookLink.objects.filter(
+            doi=book.doi,
+            object_type='book',
+        )
+
+    if request.POST:
+        return logic.export_book_level_citations(books)
+    template = 'reporting/report_book_citations.html'
+    context = {
+        'books': books,
+        'all_book_links': all_book_links,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
+@staff_member_required
+def report_book_citing_works(request, book_id):
+    """
+    Displays citing works for a given book.
+    """
+    # Check if the books plugin exists or not.
+    if not plugins.check_plugin_exists('books'):
+        raise Http404("The Books plugin is not installed")
+    from plugins.books import models as book_models
+    book = get_object_or_404(
+        book_models.Book,
+        pk=book_id,
+    )
+    links = mm.BookLink.objects.filter(
+        doi=book.doi,
+        object_type='book',
+    )
+    if request.POST:
+        return logic.export_citing_books(book, links)
+
+    template = 'reporting/report_book_citing_works.html'
+    context = {
+        'book': book,
+        'links': links,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
 
 
 @editor_user_required
