@@ -7,7 +7,7 @@ VERSION = '1.2'
 SHORT_NAME = 'reporting'
 DISPLAY_NAME = 'reporting'
 MANAGER_URL = 'reporting_index'
-JANEWAY_VERSION = "1.5.0"
+JANEWAY_VERSION = "1.5.1"
 
 
 def get_self():
