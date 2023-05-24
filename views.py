@@ -57,24 +57,27 @@ def report_articles(request, journal_id):
     :param journal_id: int, pk of a Journal object
     :return: HttpResponse or HttpRedirect
     """
+    # this needs to be a queryset to fetch data.
     journals = models.Journal.objects.filter(id=journal_id)
-    journal = journals.first()
     if not journals.exists():
         raise Http404
-    start_date, end_date = logic.get_start_and_end_date(request)
-    journals = logic.press_journal_report_data(journals, start_date, end_date)
-    articles = logic.get_articles(journal, start_date, end_date)
 
+    start_date, end_date = logic.get_start_and_end_date(request)
+    journals = logic.press_journal_report_data(
+        journals,
+        start_date,
+        end_date,
+    )
+    articles = logic.get_articles(journals.first(), start_date, end_date)
     date_form = forms.DateForm(
         initial={'start_date': start_date, 'end_date': end_date}
     )
-
     if request.POST:
-        return logic.export_article_csv(articles, journal)
+        return logic.export_article_csv(articles, journals.first())
 
     template = 'reporting/report_articles.html'
     context = {
-        'journal': journal,
+        'journal': journals.first(),
         'articles': articles,
         'start_date': start_date,
         'end_date': end_date,
