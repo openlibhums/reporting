@@ -236,6 +236,7 @@ def stream_csv(headers, iterable, filename=None):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
+
 def export_journal_csv(journals):
     all_rows = list()
     header_row = [
@@ -452,7 +453,6 @@ def get_most_viewed_article(metrics):
 def press_journal_report_data(journals, start_date, end_date):
     data = []
 
-
     submissions_subq = sm.Article.objects.filter(
         journal=OuterRef("id"),
         date_submitted__gte=start_date,
@@ -507,8 +507,6 @@ def press_journal_report_data(journals, start_date, end_date):
         total_views=Subquery(views_subq, output_field=IntegerField()),
         total_downloads=Subquery(downloads_subq, output_field=IntegerField()),
     )
-
-
     return journals
 
 
