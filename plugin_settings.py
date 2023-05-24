@@ -1,4 +1,5 @@
 from utils import models
+from utils import plugins
 
 PLUGIN_NAME = 'reporting'
 DESCRIPTION = 'This is a plugin for reporting on articles in Janeway.'
@@ -10,29 +11,19 @@ MANAGER_URL = 'reporting_index'
 JANEWAY_VERSION = "1.5.0"
 
 
-def get_self():
-    new_plugin, created = models.Plugin.objects.get_or_create(
-        name=SHORT_NAME,
-        display_name=DISPLAY_NAME,
-        version=VERSION,
-        enabled=True
-    )
-    return new_plugin
+class ReportingPlugin(plugins.Plugin):
+    plugin_name = PLUGIN_NAME
+    display_name = DISPLAY_NAME
+    description = DESCRIPTION
+    author = AUTHOR
+    short_name = SHORT_NAME
+    version = VERSION
+    janeway_version = JANEWAY_VERSION
+    manager_url = MANAGER_URL
 
 
 def install():
-    new_plugin, created = models.Plugin.objects.get_or_create(
-        name=SHORT_NAME,
-        display_name=DISPLAY_NAME,
-        version=VERSION,
-        enabled=True,
-        press_wide=True
-    )
-
-    if created:
-        print('Plugin {0} installed.'.format(PLUGIN_NAME))
-    else:
-        print('Plugin {0} is already installed.'.format(PLUGIN_NAME))
+    ReportingPlugin.install()
 
 
 def hook_registry():
