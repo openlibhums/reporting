@@ -49,10 +49,7 @@ class MonthForm(forms.Form):
 
 
 class YearForm(forms.Form):
-    year = forms.IntegerField(
-        max_value=logic.current_year(),
-        min_value=logic.earliest_citation_year(),
-    )
+    year = forms.IntegerField()
     all_time = forms.BooleanField(
         required=False,
         help_text='Ignors the year value.',

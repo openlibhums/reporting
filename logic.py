@@ -204,6 +204,7 @@ def export_csv(rows):
         filename
     )
 
+
 def stream_csv(headers, iterable, filename=None):
     """ A more performant version of export_csv
     Instead of loading all rows in memory and flushing to a file before serving,
@@ -212,6 +213,7 @@ def stream_csv(headers, iterable, filename=None):
     :iterable: an iterable that yields lists or tuples of row data
     """
     filename = filename or '{0}.csv'.format(timezone.now())
+
     def response_streamer():
         """Writes each row to an in-memory file that is yielded immediately"""
 
@@ -362,7 +364,7 @@ def export_journal_level_citations(journals):
     return export_csv(all_rows)
 
 
-def export_article_level_citations(articles):
+def export_article_level_citations(articles, by_year=False):
     all_rows = list()
     header_row = [
         'Title',
@@ -376,7 +378,7 @@ def export_article_level_citations(articles):
             [
                 article.title,
                 article.date_published,
-                article.citation_count,
+                article.citation_count if not by_year else article.citations_in_year.count(),
             ]
         )
 
@@ -544,7 +546,6 @@ def journal_usage_by_month_data(date_parts):
     data = {}
     metrics = mm.ArticleAccess.objects.all()
 
-
     start = timezone.make_aware(timezone.datetime(
         int(date_parts["start_month_y"]),
         int(date_parts["start_month_m"]),
@@ -611,6 +612,7 @@ def journal_usage_by_month_data(date_parts):
 
     return data, dates, maximum, minimum
 
+
 @cache(600)
 def ajournal_usage_by_month_data(date_parts):
     journals = jm.Journal.objects.filter(is_remote=False, hide_from_press=False)
@@ -652,6 +654,7 @@ def ajournal_usage_by_month_data(date_parts):
 
 
     return data, dates
+
 
 def build_range_metrics_subq(start, end):
     return mm.ArticleAccess.objects.filter(

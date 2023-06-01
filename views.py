@@ -281,14 +281,18 @@ def report_citations(request):
             'all_time': all_time,
         }
     )
+    by_year = True
+    if request.GET.get('all_time', False) == 'on':
+        by_year = False
 
     all_articles = sm.Article.objects.filter(
         articlelink__year__isnull=False,
     ).distinct()
+
     if request.journal:
         all_articles = all_articles.filter(journal=request.journal)
 
-    if not request.GET.get('all_time', False) == 'on':
+    if by_year:
         data = all_articles.filter(articlelink__year=year).distinct()
 
         for article in data:
@@ -299,6 +303,9 @@ def report_citations(request):
 
     else:
         data = all_articles
+
+    if request.POST:
+        return logic.export_article_level_citations(data, by_year)
 
     template = 'reporting/report_citations.html'
     context = {
