@@ -1,8 +1,8 @@
 {% extends "admin/core/base.html" %}
 {% load timedelta %}
 
-{% block title %}Reports{% endblock %}
-{% block title-section %}Journal Usages by Month{% endblock %}
+{% block title %}Journal Workflow Report{% endblock %}
+{% block title-section %}Displays time to publication information for articles including averages{% endblock %}
 
 {% block breadcrumbs %}
     {{ block.super }}
@@ -89,9 +89,9 @@
                                     <td>{{ article.date_submitted }}</td>
                                     <td>{{ article.date_accepted }}</td>
                                     <td>{{ article.date_published }}</td>
-                                    <td>{% if article.submission_to_accept %}{{ article.submission_to_accept|display_timedelta }} days{% else %}N/A{% endif %}</td>
-                                    <td>{% if article.accept_to_publication %}{{ article.accept_to_publication|display_timedelta }} days{% else %}N/A{% endif %}</td>
-                                    <td>{% if article.submission_to_publication %}{{ article.submission_to_publication|display_timedelta }} days{% else %}N/A{% endif %}</td>
+                                    <td>{% if article.submission_to_accept %}{{ article.submission_to_accept|display_timedelta }}{% else %}N/A{% endif %}</td>
+                                    <td>{% if article.accept_to_publication %}{{ article.accept_to_publication|display_timedelta }}{% else %}N/A{% endif %}</td>
+                                    <td>{% if article.submission_to_publication %}{{ article.submission_to_publication|display_timedelta }}{% else %}N/A{% endif %}</td>
                                 </tr>
                             {% empty %}
                             <tr>
