@@ -458,7 +458,7 @@ def report_workflow(request):
     )
 
     if request.journal:
-        article_list.filter(journal=request.journal)
+        article_list = article_list.filter(journal=request.journal)
 
     averages = logic.get_averages(
         article_list,
