@@ -193,7 +193,7 @@ def export_csv(rows):
     filename = '{0}.csv'.format(timezone.now())
     full_path = os.path.join(settings.BASE_DIR, 'files', 'temp', filename)
 
-    with open(full_path, 'w') as csvfile:
+    with open(full_path, 'w', encoding='utf-8') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
         for row in rows:
             csv_writer.writerow(row)
