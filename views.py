@@ -435,3 +435,49 @@ def report_licenses(request):
 
     return render(request, template, context)
 
+
+@editor_user_required
+def report_workflow(request):
+    """
+    Shows average times for:
+    - Submission to acceptance
+    - Acceptance to Publication
+    - Submission to Publication
+    :return: HttpResponse or HttpRedirect
+    """
+    start_date, end_date = logic.get_start_and_end_date(request)
+
+    start_month, end_month, date_parts = logic.get_start_and_end_months(
+        request)
+
+    article_list = sm.Article.objects.filter(
+        date_published__year__gte=date_parts.get('start_month_y'),
+        date_published__month__gte=date_parts.get('start_month_m'),
+        date_published__year__lte=date_parts.get('start_month_y'),
+        date_published__month__lte=date_parts.get('end_month_m'),
+    )
+
+    if request.journal:
+        article_list.filter(journal=request.journal)
+
+    averages = logic.get_averages(
+        article_list,
+    )
+
+    month_form = forms.MonthForm(
+        initial={
+            'start_month': start_month, 'end_month': end_month,
+        }
+    )
+
+    template = 'reporting/report_workflow.html'
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'month_form': month_form,
+        'article_list': article_list,
+        'averages': averages,
+    }
+
+    return render(request, template, context)
+

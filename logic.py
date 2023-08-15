@@ -862,8 +862,6 @@ def write_doi_tsv_report(to_write, journal=None, crosscheck=False):
 
 
 def license_report(start, end):
-    licenses = []
-
     articles = sm.Article.objects.filter(
         date_published__lte=end,
         date_published__gte=start,
@@ -871,5 +869,33 @@ def license_report(start, end):
         lcount=Count('license')
     ).order_by('lcount')
 
-    print(articles)
     return articles
+
+
+def timedelta_average(timedeltas):
+    return sum(timedeltas, timedelta(0)) / len(timedeltas)
+
+
+def get_averages(article_list):
+    submission_to_accept_days = list()
+    submission_to_publication_days = list()
+    accept_to_publication_days = list()
+
+    for article in article_list:
+        if article.date_accepted and article.date_submitted:
+            article.submission_to_accept = article.date_accepted - article.date_submitted
+            submission_to_accept_days.append(article.submission_to_accept)
+
+        if article.date_published and article.date_accepted:
+            article.accept_to_publication = article.date_published - article.date_accepted
+            accept_to_publication_days.append(article.accept_to_publication)
+
+        if article.date_published and article.date_submitted:
+            article.submission_to_publication = article.date_published - article.date_submitted
+            submission_to_publication_days.append(article.submission_to_publication)
+
+    return {
+        'submission_to_accept_average': timedelta_average(submission_to_accept_days),
+        'submission_to_publication_average': timedelta_average(submission_to_publication_days),
+        'accept_to_publication_average': timedelta_average(accept_to_publication_days),
+    }

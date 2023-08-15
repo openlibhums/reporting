@@ -51,4 +51,7 @@ urlpatterns = [
     re_path(r'^licenses/$',
         views.report_licenses,
         name='reporting_license'),
+    re_path(r'^workflow/$',
+        views.report_workflow,
+        name='reporting_workflow'),
 ]
