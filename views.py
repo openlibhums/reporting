@@ -464,6 +464,9 @@ def report_workflow(request):
         article_list,
     )
 
+    if request.POST:
+        return logic.export_workflow_report(article_list, averages)
+
     month_form = forms.MonthForm(
         initial={
             'start_month': start_month, 'end_month': end_month,
