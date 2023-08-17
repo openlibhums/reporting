@@ -51,4 +51,9 @@ urlpatterns = [
     re_path(r'^licenses/$',
         views.report_licenses,
         name='reporting_license'),
+    re_path(
+        r'^api/geo/$',
+        views.geographical_data,
+        name='api_geographical_data'
+    ),
 ]
