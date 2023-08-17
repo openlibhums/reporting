@@ -18,7 +18,7 @@ from security.decorators import editor_user_required
 from submission import models as sm
 from journal import models as jm
 from metrics import models as mm
-from api import serializers, permissions as api_permissions
+from api import permissions as api_permissions
 
 
 @editor_user_required
