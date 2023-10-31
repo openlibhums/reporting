@@ -4,8 +4,7 @@ from itertools import chain
 import os
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
-import datetime
-from datetime import datetime
+
 
 from django.http import StreamingHttpResponse
 from django.urls import reverse
@@ -29,7 +28,6 @@ from django.db.models import (
 from django.db.models.functions import TruncMonth
 
 from submission import models as sm
-from metrics import models as mm
 from core.files import serve_temp_file
 from core import models as core_models
 from utils.function_cache import cache
@@ -37,6 +35,7 @@ from journal import models as jm
 from review import models as rm
 from metrics import models as mm
 from identifiers import models as id_models
+from plugins.reporting.templatetags import timedelta as td_tag
 
 
 def get_first_day(dt, d_years=0, d_months=0):
@@ -194,7 +193,7 @@ def export_csv(rows):
     filename = '{0}.csv'.format(timezone.now())
     full_path = os.path.join(settings.BASE_DIR, 'files', 'temp', filename)
 
-    with open(full_path, 'w') as csvfile:
+    with open(full_path, 'w', encoding='utf-8') as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
         for row in rows:
             csv_writer.writerow(row)
@@ -862,8 +861,6 @@ def write_doi_tsv_report(to_write, journal=None, crosscheck=False):
 
 
 def license_report(start, end):
-    licenses = []
-
     articles = sm.Article.objects.filter(
         date_published__lte=end,
         date_published__gte=start,
@@ -871,5 +868,90 @@ def license_report(start, end):
         lcount=Count('license')
     ).order_by('lcount')
 
-    print(articles)
     return articles
+
+
+def timedelta_average(timedeltas):
+    return sum(timedeltas, timedelta(0)) / len(timedeltas)
+
+
+def get_averages(article_list):
+    submission_to_accept_days = list()
+    submission_to_publication_days = list()
+    accept_to_publication_days = list()
+
+    for article in article_list:
+
+        if article.date_accepted and article.date_submitted:
+            article.submission_to_accept = article.date_accepted - article.date_submitted
+            submission_to_accept_days.append(article.submission_to_accept)
+
+        if article.date_published and article.date_accepted:
+            article.accept_to_publication = article.date_published - article.date_accepted
+            accept_to_publication_days.append(article.accept_to_publication)
+
+        if article.date_published and article.date_submitted:
+            article.submission_to_publication = article.date_published - article.date_submitted
+            submission_to_publication_days.append(article.submission_to_publication)
+
+    return {
+        'submission_to_accept_average': timedelta_average(submission_to_accept_days),
+        'submission_to_publication_average': timedelta_average(submission_to_publication_days),
+        'accept_to_publication_average': timedelta_average(accept_to_publication_days),
+    }
+
+
+def export_workflow_report(article_list, averages):
+    all_rows = list()
+
+    average_headers = [
+        'Submission to Acceptance Average',
+        'Acceptance to Publication Average',
+        'Submission to Publication Average',
+    ]
+
+    all_rows.append(average_headers)
+    all_rows.append(
+        [
+            td_tag.display_timedelta(
+                averages.get('submission_to_accept_average')
+            ),
+            td_tag.display_timedelta(
+                averages.get('accept_to_publication_average')
+            ),
+            td_tag.display_timedelta(
+                averages.get('submission_to_publication_average')
+            )
+        ]
+    )
+
+    article_headers = [
+        'ID',
+        'Title',
+        'DOI',
+        'Date Submitted',
+        'Date Accepted',
+        'Date Published',
+        'Submission to Acceptance',
+        'Acceptance to Publication',
+        'Submission to Publication',
+    ]
+
+    all_rows.append(article_headers)
+
+    for article in article_list:
+        row = [
+            article.pk,
+            article.title,
+            article.get_doi(),
+            article.date_submitted,
+            article.date_accepted,
+            article.date_published,
+            article.submission_to_accept if hasattr(article, 'submission_to_accept') else '',
+            article.accept_to_publication if hasattr(article, 'accept_to_publication') else '',
+            article.submission_to_publication if hasattr(article, 'submission_to_publication') else '',
+        ]
+
+        all_rows.append(row)
+
+    return export_csv(all_rows)

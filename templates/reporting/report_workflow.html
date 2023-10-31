@@ -1,0 +1,109 @@
+{% extends "admin/core/base.html" %}
+{% load timedelta %}
+
+{% block title %}Journal Workflow Report{% endblock %}
+{% block title-section %}Displays time to publication information for articles including averages{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li>Workflow Times Report</li>
+{% endblock %}
+
+{% block body %}
+    <div class="row expanded">
+        <div class="large-7 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Date Filters</h2>
+                </div>
+                <div class="content">
+                    <div class="large-12 columns"><p class="help-text">Choose a year and month using the YYYY-MM format. The report will cover articles that have been published during this specific time period.</p></div>
+                    <form method="GET">
+                        {{ month_form.errors|safe }}
+                        <div class="large-4 columns">
+                            {{ month_form.start_month }}
+                        </div>
+                        <div class="large-4 columns">
+                            {{ month_form.end_month }}
+                        </div>
+                        <div class="large-2 columns end">
+                            <button class="button">Submit</button>
+                        </div>
+                    </form>
+                    <p><br /></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row expanded">
+        <div class="large-2 columns">
+            <div class="callout success">
+                <h4>Submission to Acceptance Average</h4>
+                <p>{{ averages.submission_to_accept_average|display_timedelta }}</p>
+            </div>
+        </div>
+        <div class="large-2 columns">
+            <div class="callout success">
+                <h4>Acceptance to Publication Average</h4>
+                <p>{{ averages.accept_to_publication_average|display_timedelta }}</p>
+            </div>
+        </div>
+        <div class="large-2 columns">
+            <div class="callout success">
+                <h4>Submission to Publication Average</h4>
+                <p>{{ averages.submission_to_publication_average|display_timedelta }}</p>
+            </div>
+        </div>
+        <div class="large-12 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Journals</h2>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <button class="button">Export to CSV</button>
+                    </form>
+                </div>
+                <div class="content">
+                    <div>
+                    <table class="table scroll small" id="press_report">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>DOI</th>
+                            <th>Date Submitted</th>
+                            <th>Date Accepted</th>
+                            <th>Date Published</th>
+                            <th>Submission to Acceptance</th>
+                            <th>Acceptance to Publication</th>
+                            <th>Submission to Publication</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            {% for article in article_list %}
+                                <tr>
+                                    <td>{{ article.pk }}</td>
+                                    <td>{{ article.title|safe }}</td>
+                                    <td>{{ article.get_doi }}</td>
+                                    <td>{{ article.date_submitted }}</td>
+                                    <td>{{ article.date_accepted }}</td>
+                                    <td>{{ article.date_published }}</td>
+                                    <td>{% if article.submission_to_accept %}{{ article.submission_to_accept|display_timedelta }}{% else %}N/A{% endif %}</td>
+                                    <td>{% if article.accept_to_publication %}{{ article.accept_to_publication|display_timedelta }}{% else %}N/A{% endif %}</td>
+                                    <td>{% if article.submission_to_publication %}{{ article.submission_to_publication|display_timedelta }}{% else %}N/A{% endif %}</td>
+                                </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6">No articles published within that timeframe.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
