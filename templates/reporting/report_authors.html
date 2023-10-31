@@ -1,0 +1,63 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}{{ journal.name }} Author Report{% endblock %}
+{% block title-section %}{{ journal.name }} Author Report{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+{% endblock %}
+
+{% block body %}
+    <div class="box">
+        <div class="title-area">
+            <h2>Filter by Dates</h2>
+        </div>
+        <div class="content">
+            <div class="row expanded">
+                <form method="GET">
+                    {{ date_form.errors|safe }}
+                    <div class="large-2 columns">
+                        {{ date_form.start_date }}
+                    </div>
+                    <div class="large-2 columns">
+                        {{ date_form.end_date }}
+                    </div>
+                    <div class="large-2 columns end">
+                        <button class="button">Submit</button>
+                        <button name="csv" class="button">Export to CSV</button>
+                    </div>
+                </form>
+            </div>
+            <div class="row expanded">
+                <div class="large-12 columns">
+                    <div class="title-area">
+                        <h2>Authors and their publications</h2>
+                    </div>
+                    <table class="" id="report">
+                        <thead>
+                            <tr>
+                              {% for header in headers %}
+                                <th>{{ header }}</th>
+                              {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in rows %}
+                            <tr>
+                              {% for cell in row %}
+                                <th>{{ cell }}</th>
+                              {% endfor %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    {% include "elements/datatables.html" with target="#report" %}
+{% endblock js %}

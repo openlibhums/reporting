@@ -9,6 +9,7 @@ from django.shortcuts import (
 )
 from django.utils import translation
 
+from core import models as core_models
 from plugins.reporting import forms, logic
 from journal import models
 from production import models as pm
@@ -435,3 +436,45 @@ def report_licenses(request):
 
     return render(request, template, context)
 
+AUTHOR_REPORT_HEADERS = [
+        "Author Name", "Author Email", "Author Affiliation",
+        "Article ID", "Article Title", "Date Published",
+]
+
+@editor_user_required
+def report_authors(request):
+    start_date, end_date = logic.get_start_and_end_date(request)
+    date_form = forms.DateForm(
+        initial={'start_date': start_date, 'end_date': end_date}
+    )
+    row_generator = None
+
+    if request.GET:
+        accounts = core_models.Account.objects.filter(
+            authors__date_published__gte=start_date,
+            authors__date_published__lte=end_date,
+        )
+        if request.journal:
+            accounts = accounts.filter(authors__journal=request.journal)
+
+        # This is a fairly expensive report, avoid memoizing entire set
+        row_generator = (
+            (
+                account.full_name(), account.email, account.affiliation(),
+                article.id, article.title, article.date_published
+            )
+            for account in accounts
+            for article in account.published_articles()
+        )
+        if "csv" in request.GET:
+            return logic.stream_csv(
+                AUTHOR_REPORT_HEADERS, row_generator, "author_report.csv")
+    context = {
+        "headers": AUTHOR_REPORT_HEADERS,
+        "rows": row_generator,
+        "date_form": date_form,
+    }
+
+    template = 'reporting/report_authors.html'
+
+    return render(request, template, context)
