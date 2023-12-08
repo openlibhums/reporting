@@ -167,7 +167,6 @@ def get_articles(journal, start_date, end_date):
         other_downloads=Subquery(other_downloads, output_field=IntegerField()),
     )
 
-
     return articles
 
 
@@ -189,8 +188,9 @@ def get_accesses(journal, start_date, end_date):
     return views, downloads
 
 
-def export_csv(rows):
-    filename = '{0}.csv'.format(timezone.now())
+def export_csv(rows, filename=None):
+    if not filename:
+        filename = '{0}.csv'.format(timezone.now())
     full_path = os.path.join(settings.BASE_DIR, 'files', 'temp', filename)
 
     with open(full_path, 'w', encoding='utf-8') as csvfile:
@@ -341,7 +341,7 @@ def export_production_csv(production_assignments):
         ]
         all_rows.append(row)
 
-    return export_csv(all_rows)
+    return export_csv(all_rows, filename="production_timeline.csv")
 
 
 def export_journal_level_citations(journals):
@@ -360,7 +360,7 @@ def export_journal_level_citations(journals):
             ]
         )
 
-    return export_csv(all_rows)
+    return export_csv(all_rows, filename="journal_citations.csv")
 
 
 def export_article_level_citations(articles, by_year=False):
@@ -381,7 +381,7 @@ def export_article_level_citations(articles, by_year=False):
             ]
         )
 
-    return export_csv(all_rows)
+    return export_csv(all_rows, filename="article_citations.csv")
 
 
 def export_citing_articles(article):
@@ -404,7 +404,51 @@ def export_citing_articles(article):
             ]
         )
 
-    return export_csv(all_rows)
+    return export_csv(all_rows, filename="article_citing_works.csv")
+
+
+def export_book_level_citations(books):
+    rows = list()
+    header_row = [
+        'Title',
+        'DOI',
+        'Publication Date',
+        'Citations'
+    ]
+    rows.append(header_row)
+
+    for book in books:
+        rows.append(
+            [
+                book.title,
+                book.doi,
+                book.date_published,
+                book.links.count(),
+            ]
+        )
+    return export_csv(rows, filename="book_citation_count.csv")
+
+
+def export_citing_books(book, links):
+    rows = list()
+    header_row = [
+        'Title',
+        'DOI',
+        'ISBN',
+        'e-ISBN'
+    ]
+    rows.append(header_row)
+
+    for link in links:
+        rows.append(
+            [
+                link.title,
+                link.doi,
+                link.isbn_print,
+                link.isbn_electronic,
+            ]
+        )
+    return export_csv(rows, filename=f"book_{book.pk}_citing_works.csv")
 
 
 def average(lst):
@@ -439,7 +483,7 @@ def export_country_csv(metrics):
         all_rows.append(
             [row.get('country__name'), row.get('country_count')]
         )
-    return export_csv(all_rows)
+    return export_csv(all_rows, filename="access_by_country.csv")
 
 
 @cache(300)
