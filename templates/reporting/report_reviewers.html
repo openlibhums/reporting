@@ -1,0 +1,88 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}Peer Reviewers Data Report{% endblock %}
+{% block title-section %}Peer Reviewers Data Report{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li>Peer Reviewers Data Report</li>
+{% endblock %}
+
+{% block body %}
+    <div class="row expanded">
+        <div class="large-7 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Context</h2>
+                </div>
+                <div class="content">
+                    <p>This report displays totals for each reviewer including
+                        total request, accepted, declined and withdrawn
+                        reviews. Note that for the <em>Average Time to
+                            Completion</em> column all review assignments where
+                        date_requested is greater than date_completed are
+                        ignored. This is usually due to an import where the
+                        date_requested is not actually known.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="large-12 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Peer Reviewers Data Report for {{ request.journal.name }}</h2>
+                    <a href="?csv" class="button">Export to CSV</a>
+                </div>
+                <div class="content">
+                    <div class="row expanded">
+                        <table id="reviewers_report">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Total Requests</th>
+                                <th>Accepted Requests</th>
+                                <th>Declined Requests</th>
+                                <th>Withdrawn Requests</th>
+                                <th>Completed Requests</th>
+                                <th>Requests Awaiting Response</th>
+                                <th>Earliest Completed Review</th>
+                                <th>Latest Completed Review</th>
+                                <th>Average Time to Completion</th>
+                                <th>Average Rating</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for reviewer in reviewers %}
+                                <tr>
+                                    <td>{{ reviewer.reviewer }}</td>
+                                    <td>{{ reviewer.reviewer__first_name }}</td>
+                                    <td>{{ reviewer.reviewer__last_name }}</td>
+                                    <td>{{ reviewer.total_assignments }}</td>
+                                    <td>{{ reviewer.accepted_assignments }}</td>
+                                    <td>{{ reviewer.declined_assignments }}</td>
+                                    <td>{{ reviewer.withdrawn_assignments }}</td>
+                                    <td>{{ reviewer.completed_assignments }}</td>
+                                    <td>{{ reviewer.assignments_awaiting_response }}</td>
+                                    <td>
+                                        {{ reviewer.earliest_completed_review|date:"Y-m-d" }}</td>
+                                    <td>
+                                        {{ reviewer.latest_completed_review|date:"Y-m-d" }}</td>
+                                    <td>{{ reviewer.average_time_to_complete }}</td>
+                                    <td>{{ reviewer.average_rating }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    {% include "elements/datatables.html" with target="#reviewers_report" %}
+{% endblock js %}

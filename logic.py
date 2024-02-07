@@ -17,15 +17,19 @@ from django.db.models import (
     F,
     IntegerField,
     Min,
+    Max,
     Case,
     Count,
     Q,
     Subquery,
     Func,
     When,
-    OuterRef
+    OuterRef,
+    Avg,
+    fields,
 )
 from django.db.models.functions import TruncMonth
+from django.utils.text import capfirst
 
 from submission import models as sm
 from core.files import serve_temp_file
@@ -215,10 +219,14 @@ def stream_csv(headers, iterable, filename=None):
 
     def response_streamer():
         """Writes each row to an in-memory file that is yielded immediately"""
-
         # Headers
         file_like = StringIO()
-        csv_writer = csv.writer(file_like)
+        csv_writer = csv.writer(
+            file_like,
+            delimiter=',',
+            quotechar='"',
+            quoting=csv.QUOTE_ALL,
+        )
         csv_writer.writerow(headers)
         yield file_like.getvalue()
 
@@ -999,3 +1007,324 @@ def export_workflow_report(article_list, averages):
         all_rows.append(row)
 
     return export_csv(all_rows)
+
+
+@cache(600)
+def get_report_reviewers_data(journal):
+    return rm.ReviewAssignment.objects.filter(
+        article__journal=journal
+    ).values(
+        'reviewer',
+        'reviewer__first_name',
+        'reviewer__last_name',
+    ).annotate(
+        total_assignments=Count('id'),
+        accepted_assignments=Count(
+            'id',
+            filter=Q(date_accepted__isnull=False)
+        ),
+        declined_assignments=Count(
+            'id',
+            filter=Q(
+                date_declined__isnull=False,
+                decision__isnull=True,
+            )
+        ),
+        withdrawn_assignments=Count(
+            'id',
+            filter=Q(
+                decision='withdrawn',
+            )
+        ),
+        completed_assignments=Count(
+            'id',
+            filter=Q(
+                date_declined__isnull=True,
+                decision__isnull=False,
+                date_complete__isnull=False,
+                is_complete=True,
+            )
+        ),
+        assignments_awaiting_response=Count(
+            'id',
+            filter=Q(
+                decision__isnull=True,
+                date_accepted__isnull=True,
+                date_declined__isnull=True,
+            ),
+        ),
+        earliest_completed_review=Min(
+            'date_complete',
+            filter=Q(
+                is_complete=True,
+                date_declined__isnull=True,
+            ),
+        ),
+        latest_completed_review=Max(
+            'date_complete',
+            filter=Q(
+                is_complete=True,
+                date_declined__isnull=True,
+            ),
+        ),
+        average_rating=Avg('reviewerrating__rating'),
+        average_time_to_complete=Avg(
+            Case(
+                When(
+                    date_requested__lte=F('date_complete'),
+                    then=F('date_complete') - F('date_requested')
+                ),
+                default=None,
+                output_field=fields.DurationField(),
+            ),
+            filter=Q(date_complete__isnull=False, date_declined__isnull=True)
+        ),
+    )
+
+
+def get_report_author_data(journal):
+    return core_models.Account.objects.filter(
+        accountrole__role__slug="author",
+        accountrole__journal=journal,
+    ).values(
+        'id',
+        'username',
+        'first_name',
+        'last_name',
+        'salutation',
+    ).annotate(
+        total_articles=Count(
+            'authors__id',
+            filter=Q(authors__date_submitted__isnull=False,
+                     authors__journal=journal),
+        ),
+        accepted_articles=Count(
+            'authors__id',
+            filter=Q(authors__date_submitted__isnull=False,
+                     authors__date_accepted__isnull=False,
+                     authors__journal=journal),
+        ),
+        declined_articles=Count(
+            'authors__id',
+            filter=Q(authors__date_submitted__isnull=False,
+                     authors__date_declined__isnull=False,
+                     authors__journal=journal),
+        ),
+        published_articles=Count(
+            'authors__id', filter=Q(
+                authors__date_submitted__isnull=False,
+                authors__date_published__isnull=False,
+                authors__journal=journal),
+        ),
+    )
+
+
+@cache(600)
+def get_workflow_times(journal, date_parts):
+    start = timezone.make_aware(timezone.datetime(
+        int(date_parts["start_month_y"]),
+        int(date_parts["start_month_m"]),
+        1
+    ))
+    end = timezone.make_aware(timezone.datetime(
+        int(date_parts["end_month_y"]),
+        int(date_parts["end_month_m"]),
+        1
+        # get first day of next month at 00:00:00
+    ) + relativedelta(months=1))
+    articles = sm.Article.objects.filter(
+        journal=journal,
+        date_submitted__range=[
+            start,
+            end,
+        ],
+        date_published__isnull=False,
+    )
+
+    workflow_elements = core_models.WorkflowElement.objects.filter(
+        journal=journal,
+        element_name__in=core_models.WorkflowLog.objects.filter(
+            article__journal=journal,
+            article__date_submitted__range=[
+                start,
+                end,
+            ],
+            article__date_published__isnull=False,
+        ).values('element__element_name')
+    ).order_by('order')
+
+    workflow_element_names = [element.element_name for element in workflow_elements]
+
+    workflow_logs = core_models.WorkflowLog.objects.filter(
+        article__journal=journal,
+        article__date_submitted__range=[
+            start,
+            end,
+        ],
+        article__date_published__isnull=False,
+    ).select_related('article', 'element').order_by('article', 'timestamp')
+
+    workflow_times_dict = {}
+    for article in articles:
+        workflow_times_dict[article.id] = {element_name: None for element_name in workflow_element_names}
+
+        article_logs = workflow_logs.filter(article=article)
+        for index, workflow_log in enumerate(article_logs):
+            element_name = workflow_log.element.element_name
+
+            try:
+                next_workflow_log = article_logs[index + 1]
+                time_in_element = next_workflow_log.timestamp - workflow_log.timestamp
+            except IndexError:
+                # For the last entry, compare with date_published
+                time_in_element = article.date_published - workflow_log.timestamp
+
+            workflow_times_dict[article.pk][element_name] = time_in_element
+
+    workflow_times_list = []
+    for article in articles:
+        article_id = article.id
+        workflow_times_list.append({
+            'article_title': article.title,
+            'date_submitted': article.date_submitted,
+            **workflow_times_dict[article_id]
+        })
+
+    return workflow_times_list
+
+
+@cache(600)
+def get_yearly_stats(journal):
+    # Get the earliest year of publication
+    earliest_year = sm.Article.objects.filter(journal=journal).order_by('date_submitted').values('date_submitted__year').first()['date_submitted__year']
+
+    yearly_stats = {}
+
+    # Loop through each year from the earliest year to the current year
+    current_year = timezone.now().year
+    for year in range(earliest_year, current_year + 1):
+        yearly_stats[year] = sm.Article.objects.filter(
+                journal=journal, date_submitted__year=year
+            ).aggregate(
+                articles_submitted=Count('id'),
+                articles_assigned_review_revision=Count(
+                    Case(
+                        When(stage__in=['Assigned', 'Under Review', 'Under Revision'], then='id'),
+                        default=None,
+                        output_field=IntegerField()
+                    )
+                ),
+                articles_accepted=Count(
+                    Case(
+                        When(date_accepted__isnull=False, then='id'),
+                        default=None,
+                        output_field=IntegerField()
+                    )
+                ),
+                articles_rejected=Count(
+                    Case(
+                        When(date_declined__isnull=False, then='id'),
+                        default=None,
+                        output_field=IntegerField()
+                    )
+                ),
+                articles_published=Count(
+                    Case(
+                        When(date_published__isnull=False, then='id'),
+                        default=None,
+                        output_field=IntegerField()
+                    )
+                ),
+                articles_archived=Count(
+                    Case(
+                        When(stage='Archived', then='id'),
+                        default=None,
+                        output_field=IntegerField()
+                    )
+                ),
+            )
+    return yearly_stats
+
+
+def yearly_stats_iterable(yearly_stats):
+    iterable = list()
+    for year, stats in yearly_stats.items():
+        iterable.append([
+            year,
+            stats.get('articles_submitted'),
+            stats.get('articles_assigned_review_revision'),
+            stats.get('articles_accepted'),
+            stats.get('articles_rejected'),
+            stats.get('articles_published'),
+            stats.get('articles_archived'),
+        ])
+    return iterable
+
+
+def get_workflow_times_export(workflow_times_list):
+    headers = ['Article Title', 'Date Submitted']
+    iterable = list()
+    for i, article_data in enumerate(workflow_times_list):
+        row = []
+        for stage, time in article_data.items():
+            if i == 0 and stage not in ['article_title', 'date_submitted']:  # first in list
+                headers.append(capfirst(stage))
+            row.append(time)
+        iterable.append(row)
+
+    return headers, iterable
+
+
+def get_report_author_export(authors):
+    headers = list()
+    iterable = list()
+    for i, author_data in enumerate(authors):
+        row = []
+        for k, v in author_data.items():
+            if i == 0:
+                headers.append(capfirst(k))
+            row.append(v)
+        iterable.append(row)
+
+    return headers, iterable
+
+
+def get_reviewers_export(reviewers):
+    headers = [
+        'ID',
+        'First Name',
+        'Last Name',
+        'Total Requests',
+        'Accepted Requests',
+        'Declined Requests',
+        'Withdrawn Requests',
+        'Completed Requests',
+        'Requests Awaiting Response',
+        'Earliest Completed Review',
+        'Latest Completed Review',
+        'Average Time to Completion',
+        'Average Rating',
+    ]
+    print(reviewers)
+    iterable = list()
+    for reviewer in reviewers:
+        iterable.append(
+            [
+                reviewer.get('reviewer'),
+                reviewer.get('reviewer__first_name'),
+                reviewer.get('reviewer__last_name'),
+                reviewer.get('total_assignments'),
+                reviewer.get('accepted_assignments'),
+                reviewer.get('declined_assignments'),
+                reviewer.get('withdrawn_assignments'),
+                reviewer.get('completed_assignments'),
+                reviewer.get('assignments_awaiting_response'),
+                reviewer.get('earliest_completed_review'),
+                reviewer.get('latest_completed_review'),
+                reviewer.get('average_time_to_complete'),
+                reviewer.get('average_rating'),
+
+            ]
+        )
+
+    return headers, iterable

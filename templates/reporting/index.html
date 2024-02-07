@@ -140,6 +140,31 @@
                                 <a href="{% url 'reporting_workflow' %}">View Report</a>
                             </div>
                         </li>
+
+                         <li class="accordion-item" data-accordion-item>
+                            <a href="#" class="accordion-title">Experimental Reports</a>
+                            <div class="accordion-content" data-tab-content>
+                                <p>Listed below are some experimental reports intended to be fully released as part of v1.6.</p>
+                                <ul>
+                                    <li>
+                                        <a href="{% url 'report_workflow_stages' %}">Workflow Stage Time to Completion</a>
+                                        <ul><li>Details how long an article took to complete each workflow stage.</li></ul>
+                                    </li>
+                                    <li>
+                                        <a href="{% url 'report_authors_data' %}">Journal Authors Report</a>
+                                        <ul><li>Shows users with the author role and statistics about their submissions.</li></ul>
+                                    </li>
+                                    <li>
+                                        <a href="{% url 'report_reviewers' %}">Peer Reviewers Data Report</a>
+                                        <ul><li>Shows statistics about each peer reviewer for this journal including total number of requests, accepted requests and declined requests.</li></ul>
+                                    </li>
+                                    <li>
+                                        <a href="{% url 'report_yearly_stats' %}">Journal Yearly Statistics</a>
+                                        <ul><li>For each year this journal has a published article this report shows the total number of submissions, acceptances, rejections, publications and the number of articles from that year that are still under review.</li></ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
                     </ul>
                 </div>
             </div>
