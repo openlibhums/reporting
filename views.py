@@ -1,4 +1,3 @@
-from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import (
     get_object_or_404,
@@ -7,11 +6,13 @@ from django.shortcuts import (
     render,
     reverse,
 )
+from django.utils import timezone
+from django.contrib.admin.views.decorators import staff_member_required
 
 from rest_framework import response
 from rest_framework.decorators import api_view, permission_classes
 
-from plugins.reporting import forms, logic, serializers
+from core import models as core_models
 from journal import models
 from production import models as pm
 from security.decorators import editor_user_required
@@ -19,6 +20,9 @@ from submission import models as sm
 from journal import models as jm
 from metrics import models as mm
 from api import permissions as api_permissions
+from utils import plugins
+
+from plugins.reporting import forms, logic, serializers
 
 
 @editor_user_required
@@ -47,6 +51,7 @@ def index(request):
     context = {
         'journal_report_form': journal_report_form,
         'journals': models.Journal.objects.all(),
+        'books_plugin_installed': plugins.check_plugin_exists('books'),
     }
 
     return render(request, 'reporting/index.html', context)
@@ -398,6 +403,73 @@ def report_article_citing_works(request, journal_id, article_id):
     return render(request, template, context)
 
 
+@staff_member_required
+def report_book_citations(request):
+    # Check if the books plugin exists or not.
+    if not plugins.check_plugin_exists('books'):
+        raise Http404("The Books plugin is not installed")
+
+    from plugins.books import models as book_models
+
+    all_book_links = mm.BookLink.objects.filter(
+        article__isnull=True,
+        object_type='book',
+    )
+    books = book_models.Book.objects.filter(
+        date_published__lte=timezone.now()
+    )
+    for book in books:
+        book.links = mm.BookLink.objects.filter(
+            doi=book.doi,
+            object_type='book',
+        )
+
+    if request.POST:
+        return logic.export_book_level_citations(books)
+    template = 'reporting/report_book_citations.html'
+    context = {
+        'books': books,
+        'all_book_links': all_book_links,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
+@staff_member_required
+def report_book_citing_works(request, book_id):
+    """
+    Displays citing works for a given book.
+    """
+    # Check if the books plugin exists or not.
+    if not plugins.check_plugin_exists('books'):
+        raise Http404("The Books plugin is not installed")
+    from plugins.books import models as book_models
+    book = get_object_or_404(
+        book_models.Book,
+        pk=book_id,
+    )
+    links = mm.BookLink.objects.filter(
+        doi=book.doi,
+        object_type='book',
+    )
+    if request.POST:
+        return logic.export_citing_books(book, links)
+
+    template = 'reporting/report_book_citing_works.html'
+    context = {
+        'book': book,
+        'links': links,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
 @editor_user_required
 def report_crossref_dois(request, journal_id=None):
     """ A view that returns a report for Crossref mapping DOIs to URLS in tsv
@@ -458,3 +530,96 @@ def report_licenses(request):
 
     return render(request, template, context)
 
+
+@editor_user_required
+def report_workflow(request):
+    """
+    Shows average times for:
+    - Submission to acceptance
+    - Acceptance to Publication
+    - Submission to Publication
+    :return: HttpResponse or HttpRedirect
+    """
+    start_date, end_date = logic.get_start_and_end_date(request)
+
+    start_month, end_month, date_parts = logic.get_start_and_end_months(
+        request)
+
+    article_list = sm.Article.objects.filter(
+        date_published__year__gte=date_parts.get('start_month_y'),
+        date_published__month__gte=date_parts.get('start_month_m'),
+        date_published__year__lte=date_parts.get('start_month_y'),
+        date_published__month__lte=date_parts.get('end_month_m'),
+    )
+
+    if request.journal:
+        article_list = article_list.filter(journal=request.journal)
+
+    averages = logic.get_averages(
+        article_list,
+    )
+
+    if request.POST:
+        return logic.export_workflow_report(article_list, averages)
+
+    month_form = forms.MonthForm(
+        initial={
+            'start_month': start_month, 'end_month': end_month,
+        }
+    )
+
+    template = 'reporting/report_workflow.html'
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'month_form': month_form,
+        'article_list': article_list,
+        'averages': averages,
+    }
+
+    return render(request, template, context)
+
+
+AUTHOR_REPORT_HEADERS = [
+        "Author Name", "Author Email", "Author Affiliation",
+        "Article ID", "Article Title", "Date Published",
+]
+
+
+@editor_user_required
+def report_authors(request):
+    start_date, end_date = logic.get_start_and_end_date(request)
+    date_form = forms.DateForm(
+        initial={'start_date': start_date, 'end_date': end_date}
+    )
+    row_generator = None
+
+    if request.GET:
+        accounts = core_models.Account.objects.filter(
+            authors__date_published__gte=start_date,
+            authors__date_published__lte=end_date,
+        )
+        if request.journal:
+            accounts = accounts.filter(authors__journal=request.journal)
+
+        # This is a fairly expensive report, avoid memoizing entire set
+        row_generator = (
+            (
+                account.full_name(), account.email, account.affiliation(),
+                article.id, article.title, article.date_published
+            )
+            for account in accounts
+            for article in account.published_articles()
+        )
+        if "csv" in request.GET:
+            return logic.stream_csv(
+                AUTHOR_REPORT_HEADERS, row_generator, "author_report.csv")
+    context = {
+        "headers": AUTHOR_REPORT_HEADERS,
+        "rows": row_generator,
+        "date_form": date_form,
+    }
+
+    template = 'reporting/report_authors.html'
+
+    return render(request, template, context)
