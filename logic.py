@@ -1305,7 +1305,6 @@ def get_reviewers_export(reviewers):
         'Average Time to Completion',
         'Average Rating',
     ]
-    print(reviewers)
     iterable = list()
     for reviewer in reviewers:
         iterable.append(
