@@ -2,7 +2,7 @@ import csv
 from io import StringIO
 from itertools import chain
 import os
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
 from dateutil.relativedelta import relativedelta
 
 
@@ -26,6 +26,7 @@ from django.db.models import (
     OuterRef
 )
 from django.db.models.functions import TruncMonth
+from django.contrib import messages
 
 from submission import models as sm
 from core.files import serve_temp_file
@@ -36,6 +37,7 @@ from review import models as rm
 from metrics import models as mm
 from identifiers import models as id_models
 from plugins.reporting.templatetags import timedelta as td_tag
+from repository import models as repository_models
 
 
 def get_first_day(dt, d_years=0, d_months=0):
@@ -999,3 +1001,75 @@ def export_workflow_report(article_list, averages):
         all_rows.append(row)
 
     return export_csv(all_rows)
+
+
+def get_metrics_start_end(request):
+    """
+    Should be used in combination with DateRangeForm. Fetches start_date and
+    end_date from request.GET and transforms them into datetimes better
+    suited for filtering accesses.
+    """
+    try:
+        try:
+            # Get start and end date from request.GET
+            start_date = datetime.strptime(
+                request.GET.get('start_date'),
+                '%Y-%m-%d',
+            )
+            end_date = datetime.strptime(
+                request.GET.get('end_date'),
+                '%Y-%m-%d',
+            ).replace(
+                hour=23,
+                minute=59,
+                second=59,
+            )
+        except ValueError:
+            start_date, end_date = None, None
+            messages.add_message(
+                request,
+                messages.WARNING,
+                'Date not in recognised format Y-m-d',
+            )
+    except TypeError:
+        # No defaults supplied at all, set to None and generate below.
+        start_date, end_date = None, None
+
+    if not start_date and not end_date:
+        # Calculate the start and end dates for this month
+        current_date = timezone.now()
+        start_date = current_date.replace(day=1)
+        end_date = start_date + relativedelta(
+            months=1,
+            days=-1,
+            hour=23,
+            minute=59,
+            second=59,
+        )
+    return start_date, end_date
+
+
+def manager_metrics_summary(repository, start_date, end_date):
+    preprints = repository_models.Preprint.objects.filter(
+        repository=repository,
+        preprintaccess__accessed__gte=start_date,
+        preprintaccess__accessed__lte=end_date
+    ).annotate(
+        total_views=Count(
+            'preprintaccess',
+            filter=Q(
+                preprintaccess__file=None,
+                preprintaccess__accessed__gte=start_date,
+                preprintaccess__accessed__lte=end_date,
+            )
+        ),
+        total_downloads=Count(
+            'preprintaccess',
+            filter=Q(
+                preprintaccess__file__isnull=False,
+                preprintaccess__accessed__gte=start_date,
+                preprintaccess__accessed__lte=end_date,
+            )
+        )
+    )
+    return preprints

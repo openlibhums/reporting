@@ -52,5 +52,16 @@ class YearForm(forms.Form):
     year = forms.IntegerField()
     all_time = forms.BooleanField(
         required=False,
-        help_text='Ignors the year value.',
+        help_text='Ignores the year value.',
+    )
+
+
+class DateRangeForm(forms.Form):
+    start_date = forms.DateTimeField(
+        label='Start Date',
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'})
+    )
+    end_date = forms.DateTimeField(
+        label='End Date',
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'})
     )
