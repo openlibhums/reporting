@@ -9,15 +9,20 @@ from django.shortcuts import (
 from django.utils import timezone
 from django.contrib.admin.views.decorators import staff_member_required
 
+from rest_framework import response
+from rest_framework.decorators import api_view, permission_classes
+
 from core import models as core_models
-from plugins.reporting import forms, logic
 from journal import models
 from production import models as pm
 from security.decorators import editor_user_required, is_repository_manager
 from submission import models as sm
 from journal import models as jm
 from metrics import models as mm
+from api import permissions as api_permissions
 from utils import plugins
+
+from plugins.reporting import forms, logic, serializers
 
 
 @editor_user_required
@@ -204,6 +209,26 @@ def report_geo(request, journal_id=None):
     }
 
     return render(request, template, context)
+
+
+@api_view(['GET'])
+@permission_classes((api_permissions.IsEditor, ))
+def geographical_data(request):
+    start_date, end_date = logic.get_start_and_end_date(request)
+
+    countries = logic.acessses_by_country(
+        request.journal,
+        start_date,
+        end_date,
+    )
+
+    serializer = serializers.GeographicalDataSerializer(
+        countries,
+        many=True,
+    )
+    return response.Response(
+        data=serializer.data,
+    )
 
 
 @editor_user_required

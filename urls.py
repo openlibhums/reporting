@@ -66,4 +66,9 @@ urlpatterns = [
     re_path(r'^repository/metrics/$',
         views.report_preprints_metrics,
         name='report_preprints_metrics'),
+    re_path(
+        r'^api/geo/$',
+        views.geographical_data,
+        name='api_geographical_data'
+    ),
 ]
