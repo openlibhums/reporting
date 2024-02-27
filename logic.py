@@ -1009,7 +1009,14 @@ def get_metrics_start_end(request):
     end_date from request.GET and transforms them into datetimes better
     suited for filtering accesses.
     """
-    try:
+    # prefill start and end date, then try to get better ones.
+    current_date = timezone.now()
+    start_date = current_date.replace(day=1)
+    end_date = start_date + relativedelta(
+        months=1,
+        days=-1,
+    )
+    if request.GET.get('start_date') and request.GET.get('end_date'):
         try:
             # Get start and end date from request.GET
             start_date = datetime.strptime(
@@ -1025,27 +1032,11 @@ def get_metrics_start_end(request):
                 second=59,
             )
         except ValueError:
-            start_date, end_date = None, None
             messages.add_message(
                 request,
                 messages.WARNING,
                 'Date not in recognised format Y-m-d',
             )
-    except TypeError:
-        # No defaults supplied at all, set to None and generate below.
-        start_date, end_date = None, None
-
-    if not start_date and not end_date:
-        # Calculate the start and end dates for this month
-        current_date = timezone.now()
-        start_date = current_date.replace(day=1)
-        end_date = start_date + relativedelta(
-            months=1,
-            days=-1,
-            hour=23,
-            minute=59,
-            second=59,
-        )
     return start_date, end_date
 
 
@@ -1059,16 +1050,16 @@ def manager_metrics_summary(repository, start_date, end_date):
             'preprintaccess',
             filter=Q(
                 preprintaccess__file=None,
-                preprintaccess__accessed__gte=start_date,
-                preprintaccess__accessed__lte=end_date,
+                preprintaccess__accessed__date__gte=start_date,
+                preprintaccess__accessed__date__lte=end_date,
             )
         ),
         total_downloads=Count(
             'preprintaccess',
             filter=Q(
                 preprintaccess__file__isnull=False,
-                preprintaccess__accessed__gte=start_date,
-                preprintaccess__accessed__lte=end_date,
+                preprintaccess__accessed__date__gte=start_date,
+                preprintaccess__accessed__date__lte=end_date,
             )
         )
     )

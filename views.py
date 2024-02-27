@@ -645,7 +645,8 @@ def report_preprints_metrics(request):
         return logic.stream_csv(
             ['ID', 'Title', 'Date Published', 'Views', 'Downloads'],
             (
-                (preprint.pk, preprint.title, preprint.date_published, preprint.total_views, preprint.total_downloads)
+                (preprint.pk, preprint.title, preprint.date_published,
+                 preprint.total_views, preprint.total_downloads)
                 for preprint in preprints
             ),
             "repository_metrics.csv"
