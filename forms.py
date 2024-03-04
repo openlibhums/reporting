@@ -1,8 +1,11 @@
+from dateutil.relativedelta import relativedelta
+from dateutil.parser import parse
+
 from django import forms
 from django.forms import ModelChoiceField
+from django.utils import timezone
 
 from journal import models
-from plugins.reporting import logic
 
 
 class JournalChoiceField(ModelChoiceField):
@@ -65,3 +68,27 @@ class DateRangeForm(forms.Form):
         label='End Date',
         widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'})
     )
+
+    def __init__(self, *args, **kwargs):
+        initial_start_date = kwargs.pop('start_date')
+        initial_end_date = kwargs.pop('end_date')
+        super().__init__(*args, **kwargs)
+        current_date = timezone.now()
+        try:
+            start_date = parse(initial_start_date)
+        except (ValueError, TypeError):
+            start_date = current_date.replace(day=1)
+
+        try:
+            end_date = parse(initial_end_date)
+        except (ValueError, TypeError):
+            end_date = start_date + relativedelta(
+                months=1,
+                days=-1,
+            )
+
+        self.fields['start_date'].initial = start_date.strftime('%Y-%m-%d')
+        self.fields['end_date'].initial = end_date.strftime('%Y-%m-%d')
+
+
+

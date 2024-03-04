@@ -1003,43 +1003,6 @@ def export_workflow_report(article_list, averages):
     return export_csv(all_rows)
 
 
-def get_metrics_start_end(request):
-    """
-    Should be used in combination with DateRangeForm. Fetches start_date and
-    end_date from request.GET and transforms them into datetimes better
-    suited for filtering accesses.
-    """
-    # prefill start and end date, then try to get better ones.
-    current_date = timezone.now()
-    start_date = current_date.replace(day=1)
-    end_date = start_date + relativedelta(
-        months=1,
-        days=-1,
-    )
-    if request.GET.get('start_date') and request.GET.get('end_date'):
-        try:
-            # Get start and end date from request.GET
-            start_date = datetime.strptime(
-                request.GET.get('start_date'),
-                '%Y-%m-%d',
-            )
-            end_date = datetime.strptime(
-                request.GET.get('end_date'),
-                '%Y-%m-%d',
-            ).replace(
-                hour=23,
-                minute=59,
-                second=59,
-            )
-        except ValueError:
-            messages.add_message(
-                request,
-                messages.WARNING,
-                'Date not in recognised format Y-m-d',
-            )
-    return start_date, end_date
-
-
 def manager_metrics_summary(repository, start_date, end_date):
     preprints = repository_models.Preprint.objects.filter(
         repository=repository,

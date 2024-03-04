@@ -21,6 +21,7 @@ from journal import models as jm
 from metrics import models as mm
 from api import permissions as api_permissions
 from utils import plugins
+from repository import models as repository_models
 
 from plugins.reporting import forms, logic, serializers
 
@@ -627,30 +628,27 @@ def report_authors(request):
 
 @is_repository_manager
 def report_preprints_metrics(request):
-    start_date, end_date = logic.get_metrics_start_end(
-        request,
-    )
     form = forms.DateRangeForm(
-        initial={
-            'start_date': start_date,
-            'end_date': end_date,
-        }
+        start_date=request.GET.get('start_date'),
+        end_date=request.GET.get('end_date'),
     )
-    preprints = logic.manager_metrics_summary(
-        request.repository,
-        start_date,
-        end_date,
-    )
-    if "csv" in request.GET:
-        return logic.stream_csv(
-            ['ID', 'Title', 'Date Published', 'Views', 'Downloads'],
-            (
-                (preprint.pk, preprint.title, preprint.date_published,
-                 preprint.total_views, preprint.total_downloads)
-                for preprint in preprints
-            ),
-            "repository_metrics.csv"
+    preprints = repository_models.Preprint.objects.none()
+    if form.is_valid():
+        preprints = logic.manager_metrics_summary(
+            request.repository,
+            form.cleaned_data.get('start_date'),
+            form.cleaned_data.get('end_date'),
         )
+        if "csv" in request.GET:
+            return logic.stream_csv(
+                ['ID', 'Title', 'Date Published', 'Views', 'Downloads'],
+                (
+                    (preprint.pk, preprint.title, preprint.date_published,
+                     preprint.total_views, preprint.total_downloads)
+                    for preprint in preprints
+                ),
+                "repository_metrics.csv"
+            )
     template = 'reporting/report_preprints_metrics.html'
     context = {
         'preprints': preprints,

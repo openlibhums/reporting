@@ -24,9 +24,12 @@
         <div class="content">
             <form method="GET">
                 <div class="large-12 columns">
-                    <p>Set a start and end date using the form below. This will
+                    <p>
+                        Set a start and end date using the form below. This will
                         filter the preprints to show only those with accesses
-                        between the selected dates.</p>
+                        between the selected dates.
+                    </p>
+                    {% include "admin/elements/forms/errors.html" with form=form %}
                 </div>
                 <div class="large-4 columns">
                     {{ form.start_date|foundation }}
