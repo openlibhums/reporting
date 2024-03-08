@@ -15,12 +15,13 @@ from rest_framework.decorators import api_view, permission_classes
 from core import models as core_models
 from journal import models
 from production import models as pm
-from security.decorators import editor_user_required
+from security.decorators import editor_user_required, is_repository_manager
 from submission import models as sm
 from journal import models as jm
 from metrics import models as mm
 from api import permissions as api_permissions
 from utils import plugins
+from repository import models as repository_models
 
 from plugins.reporting import forms, logic, serializers
 
@@ -623,3 +624,38 @@ def report_authors(request):
     template = 'reporting/report_authors.html'
 
     return render(request, template, context)
+
+
+@is_repository_manager
+def report_preprints_metrics(request):
+    form = forms.DateRangeForm(
+        start_date=request.GET.get('start_date'),
+        end_date=request.GET.get('end_date'),
+    )
+    preprints = repository_models.Preprint.objects.none()
+    if form.is_valid():
+        preprints = logic.manager_metrics_summary(
+            request.repository,
+            form.cleaned_data.get('start_date'),
+            form.cleaned_data.get('end_date'),
+        )
+        if "csv" in request.GET:
+            return logic.stream_csv(
+                ['ID', 'Title', 'Date Published', 'Views', 'Downloads'],
+                (
+                    (preprint.pk, preprint.title, preprint.date_published,
+                     preprint.total_views, preprint.total_downloads)
+                    for preprint in preprints
+                ),
+                "repository_metrics.csv"
+            )
+    template = 'reporting/report_preprints_metrics.html'
+    context = {
+        'preprints': preprints,
+        'form': form,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
