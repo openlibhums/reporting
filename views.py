@@ -724,7 +724,7 @@ def report_yearly_stats(request):
 @editor_user_required
 def report_articles_under_review(request):
     articles_under_review = sm.Article.objects.filter(
-        stage__in=sm.REVIEW_STAGES,
+        stage=sm.STAGE_UNDER_REVIEW,
         journal=request.journal,
     ).prefetch_related(
         'reviewassignment_set',
