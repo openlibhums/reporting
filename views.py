@@ -13,14 +13,12 @@ from core import models as core_models
 from plugins.reporting import forms, logic
 from journal import models
 from production import models as pm
-from security.decorators import editor_user_required
+from security.decorators import editor_user_required, has_journal
 from submission import models as sm
 from journal import models as jm
 from metrics import models as mm
 from utils import plugins
-from review import models as rm
 
-from django.db.models import Count
 
 @editor_user_required
 def index(request):
@@ -714,6 +712,36 @@ def report_yearly_stats(request):
     template = 'reporting/report_yearly_stats.html'
     context = {
         'yearly_stats': yearly_stats
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
+@has_journal
+@editor_user_required
+def report_articles_under_review(request):
+    articles_under_review = sm.Article.objects.filter(
+        stage__in=sm.REVIEW_STAGES,
+        journal=request.journal,
+    ).prefetch_related(
+        'reviewassignment_set',
+    )
+    if 'csv' in request.GET:
+        return logic.stream_csv(
+            [
+                'Title', 'First Name', 'Last Name', 'Email Address',
+                'Reviewer Decision', 'Recommendation', 'Access Code',
+                'Due Date', 'Date Complete'
+            ],
+            logic.articles_under_review_iterable(articles_under_review),
+            filename=f'{request.journal.code}_yearly_stats.csv'
+        )
+    template = 'reporting/articles_under_review.html'
+    context = {
+        'articles_under_review': articles_under_review,
     }
     return render(
         request,

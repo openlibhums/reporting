@@ -1,0 +1,91 @@
+{% extends "admin/core/base.html" %}
+{% load timedelta %}
+
+{% block title %}Articles Under Review{% endblock %}
+{% block title-section %}
+    Articles Under Review
+{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li>Articles Under Review</li>
+{% endblock %}
+
+{% block body %}
+    <div class="row expanded">
+        <div class="large-7 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Context</h2>
+                </div>
+                <div class="content">
+                    <p>Displays all of the articles currently under review for
+                        this journal including their reviewers, recommendations
+                        and due dates.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="large-12 columns end">
+        <div class="box">
+            <div class="title-area">
+                <h2>Articles Under Review
+                    in {{ request.journal.name|safe }}</h2>
+                <a href="?csv" class="button">Export to CSV</a>
+            </div>
+            <div class="content">
+                <div>
+                    {% for article in articles_under_review %}
+                        <table id="article-{{ article.pk }}">
+                            <thead>
+                                <tr>
+                                    <th colspan="8">{{ article.safe_title }}</th>
+                                </tr>
+                                <tr>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Email Address</th>
+                                    <th>Reviewer Decision</th>
+                                    <th>Recommendation</th>
+                                    <th>Access Code</th>
+                                    <th>Due Date</th>
+                                    <th>Date Complete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for review in article.reviewassignment_set.all %}
+                                <tr>
+                                    <td>{{ review.reviewer.first_name }}</td>
+                                    <td>{{ review.reviewer.last_name }}</td>
+                                    <td>{{ review.reviewer.email }}</td>
+                                    <td>{% if review.decision == 'withdrawn' %}
+                                        {% trans 'Withdrawn' %}
+                                        {{ review.date_complete|date:"Y-m-d" }}
+                                        {% elif review.date_accepted %}{% trans 'Accepted' %}
+                                        {{ review.date_accepted|date:"Y-m-d" }}
+                                        {% elif review.date_declined %}{% trans 'Declined' %}
+                                        {{ review.date_declined|date:"Y-m-d" }}
+                                    {% else %}
+                                        {% trans 'Awaiting acknowledgement' %}{% endif %}
+                                    </td>
+                                    <td>{{ review.get_decision_display }}</td>
+                                    <td>{% journal_url 'do_review' review.pk %}?access_code={{ review.access_code }}</td>
+                                    <td>{{ review.date_due|date:"Y-m-d" }}</td>
+                                    <td>{{ review.date_complete|date:"Y-m-d" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8">No review assignments</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+{% endblock %}

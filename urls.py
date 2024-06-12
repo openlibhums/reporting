@@ -75,4 +75,7 @@ urlpatterns = [
     re_path(r'^yearly_stats/$',
         views.report_yearly_stats,
         name='report_yearly_stats'),
+    re_path(r'^under-review/$',
+        views.report_articles_under_review,
+        name='report_articles_under_review'),
 ]

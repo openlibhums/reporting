@@ -36,7 +36,7 @@ from core.files import serve_temp_file
 from core import models as core_models
 from utils.function_cache import cache
 from journal import models as jm
-from review import models as rm
+from review import models as rm, logic as rl
 from metrics import models as mm
 from identifiers import models as id_models
 from plugins.reporting.templatetags import timedelta as td_tag
@@ -1258,6 +1258,26 @@ def yearly_stats_iterable(yearly_stats):
             stats.get('articles_published'),
             stats.get('articles_archived'),
         ])
+    return iterable
+
+
+def articles_under_review_iterable(articles_under_review):
+    iterable = list()
+    for article in articles_under_review:
+        for i, review in enumerate(article.reviewassignment_set.all()):
+            iterable.append([
+                article.title if i == 0 else '',
+                review.reviewer.first_name,
+                review.reviewer.last_name,
+                review.reviewer.email,
+                review.request_decision_status(),
+                review.decision,
+                article.journal.site_url(
+                    path=rl.generate_access_code_url('do_review', review, review.access_code)
+                ),
+                review.date_due,
+                review.date_complete
+            ])
     return iterable
 
 
