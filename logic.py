@@ -1261,23 +1261,22 @@ def yearly_stats_iterable(yearly_stats):
     return iterable
 
 
-def articles_under_review_iterable(articles_under_review):
+def articles_under_review_iterable(review_assignments):
     iterable = list()
-    for article in articles_under_review:
-        for i, review in enumerate(article.reviewassignment_set.all()):
-            iterable.append([
-                article.title if i == 0 else '',
-                review.reviewer.first_name,
-                review.reviewer.last_name,
-                review.reviewer.email,
-                review.request_decision_status(),
-                review.decision,
-                article.journal.site_url(
-                    path=rl.generate_access_code_url('do_review', review, review.access_code)
-                ),
-                review.date_due,
-                review.date_complete
-            ])
+    for i, review in enumerate(review_assignments):
+        iterable.append([
+            review.article.title if i == 0 else '',
+            review.reviewer.first_name,
+            review.reviewer.last_name,
+            review.reviewer.email,
+            review.request_decision_status(),
+            review.decision,
+            review.article.journal.site_url(
+                path=rl.generate_access_code_url('do_review', review, review.access_code)
+            ),
+            review.date_due,
+            review.date_complete
+        ])
     return iterable
 
 

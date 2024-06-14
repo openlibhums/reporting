@@ -13,6 +13,8 @@
 {% endblock %}
 
 {% block body %}
+    {% regroup review_assignments by article as article_list %}
+
     <div class="row expanded">
         <div class="large-7 columns end">
             <div class="box">
@@ -36,8 +38,9 @@
             </div>
             <div class="content">
                 <div>
-                    {% for article in articles_under_review %}
-                        <table id="article-{{ article.pk }}">
+                    {% regroup review_assignments by article as article_list %}
+                    {% for article, review_assignments in article_list %}
+                        <table class="small" id="article-{{ article.pk }}">
                             <thead>
                                 <tr>
                                     <th colspan="8">{{ article.safe_title }}</th>
@@ -54,7 +57,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                            {% for review in article.reviewassignment_set.all %}
+                            {% for review in review_assignments %}
                                 <tr>
                                     <td>{{ review.reviewer.first_name }}</td>
                                     <td>{{ review.reviewer.last_name }}</td>

@@ -17,6 +17,7 @@ from security.decorators import editor_user_required, has_journal
 from submission import models as sm
 from journal import models as jm
 from metrics import models as mm
+from review import models as rm
 from utils import plugins
 
 
@@ -723,11 +724,13 @@ def report_yearly_stats(request):
 @has_journal
 @editor_user_required
 def report_articles_under_review(request):
-    articles_under_review = sm.Article.objects.filter(
-        stage=sm.STAGE_UNDER_REVIEW,
-        journal=request.journal,
-    ).prefetch_related(
-        'reviewassignment_set',
+    review_assignments = rm.ReviewAssignment.objects.filter(
+        article__stage=sm.STAGE_UNDER_REVIEW,
+        article__journal=request.journal,
+    ).select_related(
+        'article',
+        'article__journal',
+        'reviewer',
     )
     if 'csv' in request.GET:
         return logic.stream_csv(
@@ -736,12 +739,12 @@ def report_articles_under_review(request):
                 'Reviewer Decision', 'Recommendation', 'Access Code',
                 'Due Date', 'Date Complete'
             ],
-            logic.articles_under_review_iterable(articles_under_review),
-            filename=f'{request.journal.code}_yearly_stats.csv'
+            logic.articles_under_review_iterable(review_assignments),
+            filename=f'{request.journal.code}_articles_under_review.csv'
         )
     template = 'reporting/articles_under_review.html'
     context = {
-        'articles_under_review': articles_under_review,
+        'review_assignments': review_assignments,
     }
     return render(
         request,
