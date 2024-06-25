@@ -1265,7 +1265,7 @@ def articles_under_review_iterable(review_assignments):
     iterable = list()
     for i, review in enumerate(review_assignments):
         iterable.append([
-            review.article.title if i == 0 else '',
+            review.article.title,
             review.reviewer.first_name,
             review.reviewer.last_name,
             review.reviewer.email,

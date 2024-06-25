@@ -731,6 +731,8 @@ def report_articles_under_review(request):
         'article',
         'article__journal',
         'reviewer',
+    ).order_by(
+        'article__title',
     )
     if 'csv' in request.GET:
         return logic.stream_csv(
