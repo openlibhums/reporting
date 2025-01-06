@@ -918,7 +918,7 @@ def license_report(start, end):
 
 
 def timedelta_average(timedeltas):
-    return sum(timedeltas, timedelta(0)) / len(timedeltas)
+    return sum(timedeltas, timedelta(0)) / max(len(timedeltas), 1)
 
 
 def get_averages(article_list):
