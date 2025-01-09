@@ -629,8 +629,10 @@ def report_authors(request):
 @is_repository_manager
 def report_preprints_metrics(request):
     form = forms.DateRangeForm(
-        start_date=request.GET.get('start_date'),
-        end_date=request.GET.get('end_date'),
+        data={
+            'start_date': request.GET.get('start_date'),
+            'end_date': request.GET.get('end_date'),
+        },
     )
     preprints = repository_models.Preprint.objects.none()
     if form.is_valid():
