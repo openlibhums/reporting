@@ -2,7 +2,7 @@ import csv
 from io import StringIO
 from itertools import chain
 import os
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
 from dateutil.relativedelta import relativedelta
 
 
@@ -30,6 +30,7 @@ from django.db.models import (
 )
 from django.db.models.functions import TruncMonth
 from django.utils.text import capfirst
+from django.contrib import messages
 
 from submission import models as sm
 from core.files import serve_temp_file
@@ -40,6 +41,7 @@ from review import models as rm, logic as rl
 from metrics import models as mm
 from identifiers import models as id_models
 from plugins.reporting.templatetags import timedelta as td_tag
+from repository import models as repository_models
 
 
 def get_first_day(dt, d_years=0, d_months=0):
@@ -924,7 +926,7 @@ def license_report(start, end):
 
 
 def timedelta_average(timedeltas):
-    return sum(timedeltas, timedelta(0)) / len(timedeltas)
+    return sum(timedeltas, timedelta(0)) / max(len(timedeltas), 1)
 
 
 def get_averages(article_list):
@@ -1346,3 +1348,29 @@ def get_reviewers_export(reviewers):
         )
 
     return headers, iterable
+
+
+def manager_metrics_summary(repository, start_date, end_date):
+    preprints = repository_models.Preprint.objects.filter(
+        repository=repository,
+        preprintaccess__accessed__gte=start_date,
+        preprintaccess__accessed__lte=end_date
+    ).annotate(
+        total_views=Count(
+            'preprintaccess',
+            filter=Q(
+                preprintaccess__file=None,
+                preprintaccess__accessed__date__gte=start_date,
+                preprintaccess__accessed__date__lte=end_date,
+            )
+        ),
+        total_downloads=Count(
+            'preprintaccess',
+            filter=Q(
+                preprintaccess__file__isnull=False,
+                preprintaccess__accessed__date__gte=start_date,
+                preprintaccess__accessed__date__lte=end_date,
+            )
+        )
+    )
+    return preprints

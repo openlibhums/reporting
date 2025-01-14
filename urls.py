@@ -78,4 +78,12 @@ urlpatterns = [
     re_path(r'^under-review/$',
         views.report_articles_under_review,
         name='report_articles_under_review'),
+    re_path(r'^repository/metrics/$',
+        views.report_preprints_metrics,
+        name='report_preprints_metrics'),
+    re_path(
+        r'^api/geo/$',
+        views.geographical_data,
+        name='api_geographical_data'
+    ),
 ]
