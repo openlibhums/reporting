@@ -1,0 +1,68 @@
+{% extends "admin/core/base.html" %}
+{% load timedelta %}
+
+{% block title %}Journal Yearly Statistics{% endblock %}
+{% block title-section %}
+Journal Yearly Statistics
+{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li>Journal Yearly Statistics</li>
+{% endblock %}
+
+{% block body %}
+    <div class="row expanded">
+        <div class="large-7 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Context</h2>
+                </div>
+                <div class="content">
+                    <p>For each year displays a series of journal statistics. Assigned, Under Review or Under Revision shows articles that were submitted in the given year that are still in that workflow element.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="large-12 columns end">
+        <div class="box">
+            <div class="title-area">
+                <h2>Statistics by Year for {{ request.journal.name }}</h2>
+                    <a href="?csv" class="button">Export to CSV</a>
+            </div>
+            <div class="content">
+                <div>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Articles Submitted</th>
+                            <th>Assigned, Under Review, or Under Revision</th>
+                            <th>Articles Accepted</th>
+                            <th>Articles Rejected</th>
+                            <th>Articles Published</th>
+                            <th>Articles Archived</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for year, stats in yearly_stats.items %}
+                            <tr>
+                                <td>{{ year }}</td>
+                                <td>{{ stats.articles_submitted }}</td>
+                                <td>{{ stats.articles_assigned_review_revision }}</td>
+                                <td>{{ stats.articles_accepted }}</td>
+                                <td>{{ stats.articles_rejected }}</td>
+                                <td>{{ stats.articles_published }}</td>
+                                <td>{{ stats.articles_archived }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+{% endblock %}

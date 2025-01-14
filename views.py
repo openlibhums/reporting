@@ -15,10 +15,11 @@ from rest_framework.decorators import api_view, permission_classes
 from core import models as core_models
 from journal import models
 from production import models as pm
-from security.decorators import editor_user_required, is_repository_manager
+from security.decorators import editor_user_required, has_journal, is_repository_manager
 from submission import models as sm
 from journal import models as jm
 from metrics import models as mm
+from review import models as rm
 from api import permissions as api_permissions
 from utils import plugins
 from repository import models as repository_models
@@ -626,6 +627,160 @@ def report_authors(request):
     return render(request, template, context)
 
 
+@editor_user_required
+def report_reviewers(request):
+    """
+    Displays information about Peer Reviewers.
+    :param request: HttpRequest object
+    :return: HttpResponse or HttpRedirect
+    """
+    reviewers = logic.get_report_reviewers_data(
+        journal=request.journal,
+    )
+    if 'csv' in request.GET:
+        headers, iterable = logic.get_reviewers_export(
+            reviewers,
+        )
+        return logic.stream_csv(
+            headers,
+            iterable,
+            filename=f'{request.journal.code}_reviewer_report.csv'
+        )
+    template = 'reporting/report_reviewers.html'
+    context = {
+        'reviewers': reviewers,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
+@editor_user_required
+def report_authors_data(request):
+    """
+    Displays information about a Journal's authors.
+    :param request: HttpRequest object
+    :return: HttpResponse or HttpRedirect
+    """
+    authors = logic.get_report_author_data(
+        journal=request.journal,
+    )
+    if 'csv' in request.GET:
+        headers, iterable = logic.get_report_author_export(
+            authors,
+        )
+        return logic.stream_csv(
+            headers,
+            iterable,
+            f'{request.journal.code}_author_report.csv',
+        )
+    template = 'reporting/report_authors_data.html'
+    context = {
+        'authors': authors,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
+@editor_user_required
+def report_workflow_stage(request):
+    start_month, end_month, date_parts = logic.get_start_and_end_months(
+        request,
+    )
+    month_form = forms.MonthForm(
+        initial={
+            'start_month': start_month, 'end_month': end_month,
+        }
+    )
+    workflow_times_list = logic.get_workflow_times(
+        request.journal,
+        date_parts,
+    )
+    if 'csv' in request.GET:
+        headers, iterable = logic.get_workflow_times_export(
+            workflow_times_list,
+        )
+        return logic.stream_csv(
+            headers,
+            iterable,
+            filename=f'{request.journal.code}_workflow_stage_completion.csv',
+        )
+
+    context = {
+        'month_form': month_form,
+        'workflow_times_list': workflow_times_list,
+    }
+
+    template = 'reporting/workflow_timings_report.html',
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
+@editor_user_required
+def report_yearly_stats(request):
+    yearly_stats = logic.get_yearly_stats(request.journal)
+
+    if 'csv' in request.GET:
+        return logic.stream_csv(
+            ['Year', 'Articles Submitted', 'In Review', ' Articles Accepted',
+             'Artcicles Rejected', 'Articles Published', 'Articles Archived'],
+            logic.yearly_stats_iterable(yearly_stats),
+            filename=f'{request.journal.code}_yearly_stats.csv'
+        )
+
+    template = 'reporting/report_yearly_stats.html'
+    context = {
+        'yearly_stats': yearly_stats
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+
+@has_journal
+@editor_user_required
+def report_articles_under_review(request):
+    review_assignments = rm.ReviewAssignment.objects.filter(
+        article__stage=sm.STAGE_UNDER_REVIEW,
+        article__journal=request.journal,
+    ).select_related(
+        'article',
+        'article__journal',
+        'reviewer',
+    ).order_by(
+        'article__title',
+    )
+    if 'csv' in request.GET:
+        return logic.stream_csv(
+            [
+                'Title', 'First Name', 'Last Name', 'Email Address',
+                'Reviewer Decision', 'Recommendation', 'Access Code',
+                'Due Date', 'Date Complete'
+            ],
+            logic.articles_under_review_iterable(review_assignments),
+            filename=f'{request.journal.code}_articles_under_review.csv'
+        )
+    template = 'reporting/articles_under_review.html'
+    context = {
+        'review_assignments': review_assignments,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
+      
 @is_repository_manager
 def report_preprints_metrics(request):
     form = forms.DateRangeForm(
