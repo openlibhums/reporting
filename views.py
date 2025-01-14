@@ -778,7 +778,7 @@ def report_articles_under_review(request):
         request,
         template,
         context,
-    }
+    )
 
       
 @is_repository_manager
