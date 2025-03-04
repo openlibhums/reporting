@@ -780,6 +780,56 @@ def report_articles_under_review(request):
         context,
     )
 
+
+@editor_user_required
+def report_time_to_first_decision(request):
+    """
+    A report that shows for articles submitted during a time period
+    when their first decision was and the time to the first decision.
+    """
+    start_date, end_date = logic.get_start_and_end_date(request)
+    date_form = forms.DateForm(
+        request.GET,
+    )
+    articles = sm.Article.objects.none()
+    if date_form.is_valid():
+        articles = logic.get_time_to_first_decision(
+            journal=request.journal,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        if "csv" in request.GET:
+            return logic.stream_csv(
+                headers=[
+                    'ID',
+                    'Title',
+                    'Date Submitted',
+                    'First Decision Date',
+                    'Decision',
+                ],
+                iterable=[
+                    [
+                        article.pk,
+                        article.title,
+                        article.date_submitted,
+                        article.first_decision_date,
+                        article.decision_type,
+                    ]
+                    for article in articles
+                ],
+                filename=f'{request.journal.code}_time_to_first_decision.csv'
+            )
+    template = 'reporting/report_time_to_first_decision.html'
+    context = {
+        'articles': articles,
+        'date_form': date_form,
+    }
+    return render(
+        request,
+        template,
+        context,
+    )
+
       
 @is_repository_manager
 def report_preprints_metrics(request):

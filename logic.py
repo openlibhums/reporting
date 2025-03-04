@@ -2,7 +2,7 @@ import csv
 from io import StringIO
 from itertools import chain
 import os
-from datetime import datetime, date, timedelta
+from datetime import  date, timedelta
 from dateutil.relativedelta import relativedelta
 
 
@@ -27,10 +27,12 @@ from django.db.models import (
     OuterRef,
     Avg,
     fields,
+    Value,
+    CharField,
+    DateTimeField,
 )
 from django.db.models.functions import TruncMonth
 from django.utils.text import capfirst
-from django.contrib import messages
 
 from submission import models as sm
 from core.files import serve_temp_file
@@ -1374,3 +1376,37 @@ def manager_metrics_summary(repository, start_date, end_date):
         )
     )
     return preprints
+
+
+def get_time_to_first_decision(journal, start_date, end_date):
+    return sm.Article.objects.filter(
+        journal=journal,
+        date_submitted__gte=start_date,
+        date_submitted__lte=end_date,
+    ).annotate(
+        first_decision_date=ExpressionWrapper(
+            Func(
+                F("date_accepted"),
+                F("date_declined"),
+                F("revisionrequest__date_requested"),
+                function="LEAST",
+            ),
+            output_field=DateTimeField(),
+        ),
+        decision_type=Case(
+            When(
+                date_accepted=F("first_decision_date"),
+                then=Value("accept"),
+            ),
+            When(
+                date_declined=F("first_decision_date"),
+                then=Value("decline"),
+            ),
+            When(
+                revisionrequest__date_requested=F("first_decision_date"),
+                then=Value("revision"),
+            ),
+            default=Value("unknown"),
+            output_field=CharField(),
+        ),
+    )

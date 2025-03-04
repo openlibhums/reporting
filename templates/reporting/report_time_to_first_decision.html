@@ -1,0 +1,71 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}Reports{% endblock %}
+{% block title-section %}Time to First Decision{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li>Time to First Decision</li>
+{% endblock %}
+
+{% block body %}
+
+    <div class="box">
+        <div class="title-area">
+            <h2>Filter by Dates</h2>
+            <form method="GET">{% csrf_token %}
+                <a href="?csv&{% if request.GET.start_date %}start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date and request.GET.end_date %}&{% endif %}{% if request.GET.end_date %}end_date={{ request.GET.end_date }}{% endif %}" class="button">Export to CSV</a>
+            </form>
+        </div>
+        <div class="content">
+            <div class="row expanded">
+                <form method="GET">
+                    {{ date_form.errors|safe }}
+                    <div class="large-2 columns">
+                        {{ date_form.start_date }}
+                    </div>
+                    <div class="large-2 columns">
+                        {{ date_form.end_date }}
+                    </div>
+                    <div class="large-1 columns end">
+                        <button class="button">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="box">
+        <div class="content">
+            <div class="row expanded">
+                <table id="first-decision-report">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Date Submitted</th>
+                        <th>First Decision Date</th>
+                        <th>Decision</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for article in articles %}
+                        <tr>
+                            <td>{{ article.pk }}</td>
+                            <td>{{ article.safe_title }}</td>
+                            <td>{{ article.date_submitted }}</td>
+                            <td>{{ article.first_decision_date }}</td>
+                            <td>{{ article.decision_type }}</td>
+                        </tr>
+
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    {% include "elements/datatables.html" with target="#first-decision-report" %}
+{% endblock js %}

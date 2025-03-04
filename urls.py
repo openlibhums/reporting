@@ -86,4 +86,9 @@ urlpatterns = [
         views.geographical_data,
         name='api_geographical_data'
     ),
+re_path(
+        r'^first-decision/$',
+        views.report_time_to_first_decision,
+        name='report_time_to_first_decision'
+    ),
 ]
