@@ -1,0 +1,100 @@
+{% extends "admin/core/base.html" %}
+{% load timedelta %}
+
+{% block title %}Workflow Stage Completion Time{% endblock %}
+{% block title-section %}Workflow Stage Completion Time{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li>Workflow Times Report</li>
+{% endblock %}
+
+{% block body %}
+    <div class="row expanded">
+        <div class="large-7 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Context</h2>
+                </div>
+                <div class="content">
+                    <p>For published articles this report displays how long it was in each of the workflow stages.</p>
+                </div>
+                <div class="title-area">
+                    <h2>Date Filters</h2>
+                </div>
+                <div class="content">
+                    <div class="large-12 columns"><p class="help-text">Choose a
+                        year and month using the YYYY-MM format. The report
+                        will cover articles that have been published during
+                        this specific time period.</p></div>
+                    <div class="content">
+                        <form method="GET">
+                            {{ month_form.errors|safe }}
+                            <div class="large-4 columns">
+                                {{ month_form.start_month }}
+                            </div>
+                            <div class="large-4 columns">
+                                {{ month_form.end_month }}
+                            </div>
+                            <div class="large-2 columns end">
+                                <button class="button">Submit</button>
+                            </div>
+                        </form>
+                        <p><br/></p>
+                    </div>
+
+                    <p><br/></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="large-12 columns end">
+        <div class="box">
+            <div class="title-area">
+                <h2>Workflow Stage Time to Completion for {{ request.journal.name }}</h2>
+                <form method="POST">
+                    {% csrf_token %}
+                    <a href="?csv&{% if request.GET.start_month %}start_month={{ request.GET.start_month }}{% endif %}{% if request.GET.start_month and request.GET.end_month %}&{% endif %}{% if request.GET.end_month %}end_month={{ request.GET.end_month }}{% endif %}" class="button">Export to CSV</a>
+                </form>
+            </div>
+            <div class="content">
+                <div>
+                    <table id="workflow_timings">
+                        <thead>
+                        <tr>
+                            <th>Article Title</th>
+                            <th>Date Submitted</th>
+                            {% for element_name in workflow_times_list.0 %}
+                                {% if element_name != 'article_title' and element_name != 'date_submitted' %}
+                                    <th>{{ element_name|capfirst }}</th>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for workflow_times in workflow_times_list %}
+                            <tr>
+                                <td>{{ workflow_times.article_title }}</td>
+                                <td>
+                                    {{ workflow_times.date_submitted|date:"Y-m-d" }}</td>
+                                {% for element_name, time_in_element in workflow_times.items %}
+                                    {% if element_name != 'article_title' and element_name != 'date_submitted' %}
+                                        <td>
+                                            {{ time_in_element|default:"None" }}</td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    {% include "elements/datatables.html" with target="#workflow_timings" %}
+{% endblock js %}

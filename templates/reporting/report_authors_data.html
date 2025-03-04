@@ -1,0 +1,77 @@
+{% extends "admin/core/base.html" %}
+
+{% block title %}Journal Author Data Report{% endblock %}
+{% block title-section %}Journal Author Data Report{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li><a href="{% url 'reporting_index' %}">Reporting Index</a></li>
+    <li>Journal Author Data Report</li>
+{% endblock %}
+
+{% block body %}
+    <div class="row expanded">
+        <div class="large-7 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Context</h2>
+                </div>
+                <div class="content">
+                    <p>This report shows a journal's authors and their statistics.
+                        Authors are limited to users with the author role on this
+                        journal. Row totals may not add up where the author has
+                        an article in workflow that is not accepted, rejected
+                        or published.</p>
+                </div>
+            </div>
+        </div>
+        <div class="large-12 columns end">
+            <div class="box">
+                <div class="title-area">
+                    <h2>Journal Author Data Report for {{ request.journal.name }}</h2>
+                    <a href="?csv" class="button">Export to CSV</a>
+                </div>
+                <div class="content">
+                    <div class="row expanded">
+                        <table id="reviewers_report">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Salutation</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Username</th>
+                                <th>Total Articles</th>
+                                <th>Accepted Articles</th>
+                                <th>Rejected Articles</th>
+                                <th>Published Articles</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for author in authors %}
+                                <tr>
+                                    <td>{{ author.id }}</td>
+                                    <td>
+                                        {{ author.salutation|default_if_none:"" }}
+                                    </td>
+                                    <td>{{ author.first_name }}</td>
+                                    <td>{{ author.last_name }}</td>
+                                    <td>{{ author.username }}</td>
+                                    <td>{{ author.total_articles }}</td>
+                                    <td>{{ author.accepted_articles }}</td>
+                                    <td>{{ author.declined_articles }}</td>
+                                    <td>{{ author.published_articles }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block js %}
+    {% include "elements/datatables.html" with target="#reviewers_report" %}
+{% endblock js %}
