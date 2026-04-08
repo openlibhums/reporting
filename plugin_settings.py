@@ -27,4 +27,9 @@ def install():
 
 
 def hook_registry():
-    return {}
+    return {
+        "journal_editor_nav_block": {
+            "module": "plugins.reporting.hooks",
+            "function": "nav_hook",
+        },
+    }
