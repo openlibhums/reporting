@@ -15,7 +15,12 @@ from rest_framework.decorators import api_view, permission_classes
 from core import models as core_models
 from journal import models
 from production import models as pm
-from security.decorators import editor_user_required, has_journal, is_repository_manager
+from security.decorators import (
+    editor_or_manager,
+    editor_user_required,
+    has_journal,
+    is_repository_manager,
+)
 from submission import models as sm
 from journal import models as jm
 from metrics import models as mm
@@ -27,7 +32,7 @@ from repository import models as repository_models
 from plugins.reporting import forms, logic, serializers
 
 
-@editor_user_required
+@editor_or_manager
 def index(request):
     """
     Displays a list of reports for a user to select.
@@ -233,7 +238,7 @@ def geographical_data(request):
     )
 
 
-@editor_user_required
+@staff_member_required
 def press(request):
     start_date, end_date = logic.get_start_and_end_date(request)
     date_form = forms.DateForm(

@@ -8,7 +8,7 @@ VERSION = '1.2'
 SHORT_NAME = 'reporting'
 DISPLAY_NAME = 'reporting'
 MANAGER_URL = 'reporting_index'
-JANEWAY_VERSION = "1.5.1"
+JANEWAY_VERSION = "1.9"
 
 
 class ReportingPlugin(plugins.Plugin):
@@ -31,5 +31,9 @@ def hook_registry():
         "journal_editor_nav_block": {
             "module": "plugins.reporting.hooks",
             "function": "nav_hook",
+        },
+        "repository_manager_nav_block": {
+            "module": "plugins.reporting.hooks",
+            "function": "repository_manager_nav_hook",
         },
     }
