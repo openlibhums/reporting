@@ -8,7 +8,7 @@ VERSION = '1.2'
 SHORT_NAME = 'reporting'
 DISPLAY_NAME = 'reporting'
 MANAGER_URL = 'reporting_index'
-JANEWAY_VERSION = "1.5.1"
+JANEWAY_VERSION = "1.9"
 
 
 class ReportingPlugin(plugins.Plugin):
@@ -27,4 +27,9 @@ def install():
 
 
 def hook_registry():
-    return {}
+    return {
+        "additional_nav": {
+            "module": "plugins.reporting.hooks",
+            "function": "nav_hook",
+        },
+    }
