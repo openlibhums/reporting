@@ -94,6 +94,21 @@ def get_start_and_end_months(request):
     return start_month, end_month, date_parts
 
 
+def get_month_range(date_parts):
+    """
+    Builds an inclusive (start, end) date range spanning whole months from the
+    start month to the end month. For example 2020-03 to 2021-06 covers
+    2020-03-01 through 2021-06-30 inclusive.
+    """
+    start = get_first_day(
+        date(int(date_parts['start_month_y']), int(date_parts['start_month_m']), 1)
+    )
+    end = get_last_day(
+        date(int(date_parts['end_month_y']), int(date_parts['end_month_m']), 1)
+    )
+    return start, end
+
+
 def get_articles(journal, start_date, end_date):
     dt = timezone.now()
 
