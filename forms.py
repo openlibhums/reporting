@@ -32,6 +32,14 @@ class ArticleMetricsForm(forms.Form):
         widget=forms.Select(attrs={"onChange": 'this.form.submit()'}),
     )
 
+    def __init__(self, *args, user=None, journal=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only staff can pick another journal's report.
+        if user and not user.is_staff:
+            self.fields['journal'].queryset = models.Journal.objects.filter(
+                pk=journal.pk if journal else None,
+            )
+
 
 class PeerReviewJournal(forms.Form):
     peer_review_journal = JournalChoiceField(
