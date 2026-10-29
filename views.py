@@ -551,11 +551,9 @@ def report_workflow(request):
     start_month, end_month, date_parts = logic.get_start_and_end_months(
         request)
 
+    range_start, range_end = logic.get_month_range(date_parts)
     article_list = sm.Article.objects.filter(
-        date_published__year__gte=date_parts.get('start_month_y'),
-        date_published__month__gte=date_parts.get('start_month_m'),
-        date_published__year__lte=date_parts.get('start_month_y'),
-        date_published__month__lte=date_parts.get('end_month_m'),
+        date_published__date__range=(range_start, range_end),
     )
 
     if request.journal:
