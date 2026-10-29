@@ -7,7 +7,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from unittest import mock
 
-from django.http import QueryDict
+from django.http import Http404, QueryDict
 from django.test import TestCase
 from django.utils import timezone
 
@@ -16,6 +16,7 @@ from submission import models as sm_models
 from security.decorators import editor_or_manager
 from utils.install import update_settings
 from utils.testing import helpers
+from plugins.reporting import forms
 from plugins.reporting import plugin_settings as reporting_plugin_settings
 from plugins.reporting import views
 
@@ -152,3 +153,100 @@ class TestWorkflowReportDateRange(TestCase):
             self.articles_for('2026-02', '2026-02'),
             {self.published[(2026, 2)]},
         )
+
+
+class TestReportingJournalScope(TestCase):
+    """An editor of one journal must not see another journal's reports."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.press = helpers.create_press()
+        cls.press.save()
+        cls.journal_one, cls.journal_two = helpers.create_journals()
+        update_settings()
+        reporting_plugin_settings.install()
+
+        cls.editor = helpers.create_editor(
+            cls.journal_one,
+            email="reporting_scope_editor@janeway.systems",
+        )
+        cls.staff = helpers.create_user(
+            "reporting_scope_staff@janeway.systems",
+            is_staff=True,
+            is_active=True,
+        )
+        cls.article_two = helpers.create_article(cls.journal_two)
+
+    def editor_request(self):
+        return helpers.get_request(
+            user=self.editor,
+            press=self.press,
+            journal=self.journal_one,
+        )
+
+    def test_editor_gets_own_journal(self):
+        request = self.editor_request()
+        self.assertEqual(views.report_journal(request), self.journal_one)
+        self.assertEqual(
+            views.report_journal(request, str(self.journal_one.pk)),
+            self.journal_one,
+        )
+
+    def test_editor_cannot_pick_another_journal(self):
+        with self.assertRaises(Http404):
+            views.report_journal(self.editor_request(), self.journal_two.pk)
+
+    def test_staff_can_pick_any_journal_or_the_press(self):
+        request = helpers.get_request(
+            user=self.staff,
+            press=self.press,
+            journal=self.journal_one,
+        )
+        self.assertEqual(
+            views.report_journal(request, self.journal_two.pk),
+            self.journal_two,
+        )
+        self.assertIsNone(views.report_journal(request))
+
+    def test_non_staff_on_press_site_gets_nothing(self):
+        request = helpers.get_request(user=self.editor, press=self.press)
+        with self.assertRaises(Http404):
+            views.report_journal(request)
+
+    def test_journal_id_views_refuse_another_journal(self):
+        journal_id = self.journal_two.pk
+        for name in (
+            'report_articles',
+            'report_geo',
+            'report_journal_citations',
+            'report_crossref_dois',
+            'report_crossref_dois_crosscheck',
+        ):
+            view = getattr(views, name)
+            with self.subTest(view=name):
+                with self.assertRaises(Http404):
+                    view(self.editor_request(), journal_id=journal_id)
+
+    def test_citing_works_refuses_another_journals_article(self):
+        with self.assertRaises(Http404):
+            views.report_article_citing_works(
+                self.editor_request(),
+                journal_id=self.journal_one.pk,
+                article_id=self.article_two.pk,
+            )
+
+    def test_journal_picker_only_offers_own_journal(self):
+        form = forms.ArticleMetricsForm(
+            user=self.editor,
+            journal=self.journal_one,
+        )
+        self.assertEqual(
+            list(form.fields['journal'].queryset),
+            [self.journal_one],
+        )
+        form = forms.ArticleMetricsForm(
+            {'journal': self.journal_two.pk},
+            user=self.editor,
+            journal=self.journal_one,
+        )
+        self.assertFalse(form.is_valid())

@@ -31,6 +31,28 @@ from repository import models as repository_models
 from plugins.reporting import forms, logic, serializers
 
 
+def report_journal(request, journal_id=None):
+    """
+    Returns the journal a report should cover.
+
+    Staff can report on any journal, or on the whole press when no journal_id
+    is given. Everyone else only ever sees the journal they are on.
+    :param request: HttpRequest object
+    :param journal_id: optional pk of a Journal object from the URL
+    :return: a Journal object, or None for a press-wide report
+    """
+    if request.user.is_staff:
+        if journal_id:
+            return get_object_or_404(jm.Journal, pk=journal_id)
+        return None
+
+    if not request.journal:
+        raise Http404
+    if journal_id and int(journal_id) != request.journal.pk:
+        raise Http404
+    return request.journal
+
+
 @editor_or_manager
 def index(request):
     """
@@ -38,12 +60,19 @@ def index(request):
     :param request: HttpRequest object
     :return: HttpResponse or HttpRedirect
     """
-    journal_report_form = forms.ArticleMetricsForm()
+    journal_report_form = forms.ArticleMetricsForm(
+        user=request.user,
+        journal=request.journal,
+    )
 
     if request.POST:
 
         if 'journal' in request.POST:
-            journal_report_form = forms.ArticleMetricsForm(request.POST)
+            journal_report_form = forms.ArticleMetricsForm(
+                request.POST,
+                user=request.user,
+                journal=request.journal,
+            )
             if journal_report_form.is_valid():
                 journal = journal_report_form.cleaned_data.get('journal')
 
@@ -71,10 +100,9 @@ def report_articles(request, journal_id):
     :param journal_id: int, pk of a Journal object
     :return: HttpResponse or HttpRedirect
     """
+    journal = report_journal(request, journal_id)
     # this needs to be a queryset to fetch data.
-    journals = models.Journal.objects.filter(id=journal_id)
-    if not journals.exists():
-        raise Http404
+    journals = models.Journal.objects.filter(id=journal.pk)
 
     start_date, end_date = logic.get_start_and_end_date(request)
     journals = logic.press_journal_report_data(
@@ -116,7 +144,10 @@ def report_journal_usage_by_month(request):
         }
     )
 
-    data, dates, max_, min_ = logic.journal_usage_by_month_data(date_parts)
+    data, dates, max_, min_ = logic.journal_usage_by_month_data(
+        date_parts,
+        journal=report_journal(request),
+    )
 
     if request.POST:
         return logic.export_usage_by_month(data, dates)
@@ -152,6 +183,11 @@ def report_production(request):
         assigned__gte=start_date,
         assigned__lte=end_date,
     )
+    journal = report_journal(request)
+    if journal:
+        production_assignments = production_assignments.filter(
+            assignment__article__journal=journal,
+        )
 
     all_acceptance_times = list()
     all_completion_times = list()
@@ -185,10 +221,7 @@ def report_production(request):
 
 @editor_user_required
 def report_geo(request, journal_id=None):
-    if journal_id:
-        journal = get_object_or_404(models.Journal, pk=journal_id)
-    else:
-        journal = None
+    journal = report_journal(request, journal_id)
 
     start_date, end_date = logic.get_start_and_end_date(request)
 
@@ -354,7 +387,11 @@ def report_citations(request):
 
 @editor_user_required
 def report_all_citations(request):
-    journals = jm.Journal.objects.filter(hide_from_press=False)
+    journal = report_journal(request)
+    if journal:
+        journals = jm.Journal.objects.filter(pk=journal.pk)
+    else:
+        journals = jm.Journal.objects.filter(hide_from_press=False)
 
     total_counter = 0
     for journal in journals:
@@ -375,7 +412,7 @@ def report_all_citations(request):
 
 @editor_user_required
 def report_journal_citations(request, journal_id):
-    journal = get_object_or_404(jm.Journal, pk=journal_id)
+    journal = report_journal(request, journal_id)
     articles = logic.get_journal_citations(journal)
 
     if request.POST:
@@ -392,8 +429,8 @@ def report_journal_citations(request, journal_id):
 
 @editor_user_required
 def report_article_citing_works(request, journal_id, article_id):
-    journal = get_object_or_404(jm.Journal, pk=journal_id)
-    article = get_object_or_404(sm.Article, pk=article_id)
+    journal = report_journal(request, journal_id)
+    article = get_object_or_404(sm.Article, pk=article_id, journal=journal)
 
     if request.POST:
         return logic.export_citing_articles(article)
@@ -482,9 +519,7 @@ def report_crossref_dois(request, journal_id=None):
     :param journal_id: A journal ID to filter the DOI identifiers by
     :return: an HttpResponse
     """
-    journal = None
-    if journal_id:
-        journal = get_object_or_404(jm.Journal, pk=journal_id)
+    journal = report_journal(request, journal_id)
 
     response = HttpResponse(content_type='text/tsv')
     response['Content-Disposition'] = 'attachment; filename="DOI_urls.tsv"'
@@ -498,9 +533,7 @@ def report_crossref_dois_crosscheck(request, journal_id=None):
     :param journal_id: A journal ID to filter the DOI identifiers by
     :return: an HttpResponse
     """
-    journal = None
-    if journal_id:
-        journal = get_object_or_404(jm.Journal, pk=journal_id)
+    journal = report_journal(request, journal_id)
 
     response = HttpResponse(content_type='text/tsv')
     response['Content-Disposition'] = 'attachment; filename="DOI_urls.tsv"'
@@ -524,7 +557,11 @@ def report_licenses(request):
         initial={'start_date': start_date, 'end_date': end_date}
     )
 
-    data = logic.license_report(start_date, end_date)
+    data = logic.license_report(
+        start_date,
+        end_date,
+        journal=report_journal(request),
+    )
 
     template = 'reporting/report_licenses.html'
     context = {

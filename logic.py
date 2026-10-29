@@ -599,9 +599,15 @@ def export_press_csv(journals):
 
 
 @cache(600)
-def journal_usage_by_month_data(date_parts):
+def journal_usage_by_month_data(date_parts, journal=None):
     """An attempt to make the view above more performant"""
-    journals = jm.Journal.objects.filter(is_remote=False, hide_from_press=False)
+    if journal:
+        journals = jm.Journal.objects.filter(pk=journal.pk)
+    else:
+        journals = jm.Journal.objects.filter(
+            is_remote=False,
+            hide_from_press=False,
+        )
     journal_id_map = {j.id: j for j in journals}
     data = {}
     metrics = mm.ArticleAccess.objects.all()
@@ -921,11 +927,17 @@ def write_doi_tsv_report(to_write, journal=None, crosscheck=False):
     return to_write
 
 
-def license_report(start, end):
+def license_report(start, end, journal=None):
     articles = sm.Article.objects.filter(
         date_published__lte=end,
         date_published__gte=start,
-    ).values('license', 'license__name', 'license__journal__code').annotate(
+    )
+    if journal:
+        articles = articles.filter(journal=journal)
+
+    articles = articles.values(
+        'license', 'license__name', 'license__journal__code',
+    ).annotate(
         lcount=Count('license')
     ).order_by('lcount')
 

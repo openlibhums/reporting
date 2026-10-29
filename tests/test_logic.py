@@ -1,6 +1,8 @@
+from datetime import timedelta
 from io import StringIO
 
 from django.test import TestCase
+from django.utils import timezone
 
 from identifiers import models as id_models
 from plugins.reporting import logic
@@ -60,3 +62,29 @@ class TestCrossRefDOIRreport(TestCase):
         self.assertEqual(expected, result)
 
 
+class TestJournalScopedReports(TestCase):
+    def setUp(self):
+        self.press = helpers.create_press()
+        self.journal_one, self.journal_two = helpers.create_journals()
+        for journal in (self.journal_one, self.journal_two):
+            licence = sm_models.Licence.objects.create(
+                journal=journal,
+                name="CC BY 4.0",
+                short_name="CC BY 4.0",
+                url="https://creativecommons.org/licenses/by/4.0/",
+            )
+            sm_models.Article.objects.create(
+                journal=journal,
+                license=licence,
+                title="Published article",
+                stage=sm_models.STAGE_PUBLISHED,
+                date_published=timezone.now() - timedelta(days=1),
+            )
+
+    def test_license_report_filters_by_journal(self):
+        start = timezone.now() - timedelta(days=7)
+        end = timezone.now()
+        everything = logic.license_report(start, end)
+        one = logic.license_report(start, end, journal=self.journal_one)
+        self.assertEqual(sum(row['lcount'] for row in one), 1)
+        self.assertEqual(sum(row['lcount'] for row in everything), 2)
